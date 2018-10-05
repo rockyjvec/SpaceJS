@@ -579,7 +579,7 @@ namespace Jint.Native.Array
         {
             private ICallable compareFn;
             
-            ISortComparer(ICallable fn)
+            public ISortComparer(ICallable fn)
             {
                 this.compareFn = fn;
             }

@@ -6,13 +6,13 @@ using Esprima.Ast;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Boolean;
-using Jint.Native.Date;
 using Jint.Native.Error;
 using Jint.Native.Function;
 using Jint.Native.Global;
 using Jint.Native.Iterator;
 using Jint.Native.Json;
 using Jint.Native.Map;
+using Jint.Native.Console;
 using Jint.Native.Math;
 using Jint.Native.Number;
 using Jint.Native.Object;
@@ -60,7 +60,7 @@ namespace Jint
         internal readonly ArgumentsInstancePool _argumentsInstancePool;
         internal readonly JsValueArrayPool _jsValueArrayPool;
 
-        public ITypeConverter ClrTypeConverter;
+//        public ITypeConverter ClrTypeConverter;
 
         // cache of types used when resolving CLR type names
         internal Dictionary<string, Type> TypeCache = new Dictionary<string, Type>();
@@ -70,8 +70,8 @@ namespace Jint
             { typeof(bool), (Engine engine, object v) => (bool) v ? JsBoolean.True : JsBoolean.False },
             { typeof(byte), (Engine engine, object v) => JsNumber.Create((byte)v) },
             { typeof(char), (Engine engine, object v) => JsString.Create((char)v) },
-            { typeof(DateTime), (Engine engine, object v) => engine.Date.Construct((DateTime)v) },
-            { typeof(DateTimeOffset), (Engine engine, object v) => engine.Date.Construct((DateTimeOffset)v) },
+            //{ typeof(DateTime), (Engine engine, object v) => engine.Date.Construct((DateTime)v) },
+//            { typeof(DateTimeOffset), (Engine engine, object v) => engine.Date.Construct((DateTimeOffset)v) },
             { typeof(decimal), (Engine engine, object v) => (JsValue) (double)(decimal)v },
             { typeof(double), (Engine engine, object v) => (JsValue)(double)v },
             { typeof(Int16), (Engine engine, object v) => JsNumber.Create((Int16)v) },
@@ -160,7 +160,8 @@ namespace Jint
             RegExp = RegExpConstructor.CreateRegExpConstructor(this);
             Number = NumberConstructor.CreateNumberConstructor(this);
             Boolean = BooleanConstructor.CreateBooleanConstructor(this);
-            Date = DateConstructor.CreateDateConstructor(this);
+//            Date = DateConstructor.CreateDateConstructor(this);
+            Console = ConsoleInstance.CreateConsoleObject(this);
             Math = MathInstance.CreateMathObject(this);
             Json = JsonInstance.CreateJsonObject(this);
 
@@ -212,9 +213,10 @@ namespace Jint
             Boolean.Configure();
             Boolean.PrototypeObject.Configure();
 
-            Date.Configure();
-            Date.PrototypeObject.Configure();
+//            Date.Configure();
+//            Date.PrototypeObject.Configure();
 
+            Console.Configure();
             Math.Configure();
             Json.Configure();
 
@@ -252,7 +254,7 @@ namespace Jint
             _statements = new StatementInterpreter(this);
             _expressions = new ExpressionInterpreter(this);
 
-            if (Options._IsClrAllowed)
+/*            if (Options._IsClrAllowed)
             {
                 Global.FastAddProperty("System", new NamespaceReference(this, "System"), false, false, false);
                 Global.FastAddProperty("importNamespace", new ClrFunctionInstance(
@@ -260,8 +262,8 @@ namespace Jint
                     "importNamespace",
                     (thisObj, arguments) => new NamespaceReference(this, TypeConverter.ToString(arguments.At(0)))), false, false, false);
             }
-
-            ClrTypeConverter = new DefaultTypeConverter(this);
+*/
+//            ClrTypeConverter = new DefaultTypeConverter(this);
             BreakPoints = new List<BreakPoint>();
             DebugHandler = new DebugHandler(this);
         }
@@ -278,7 +280,8 @@ namespace Jint
         public RegExpConstructor RegExp { get; }
         public BooleanConstructor Boolean { get; }
         public NumberConstructor Number { get; }
-        public DateConstructor Date { get; }
+        //public DateConstructor Date { get; }
+        public ConsoleInstance Console { get; }
         public MathInstance Math { get; }
         public JsonInstance Json { get; }
         public SymbolConstructor Symbol { get; }
@@ -334,13 +337,13 @@ namespace Jint
 
             _executionContexts.Push(context);
         }
-
+/*
         public Engine SetValue(string name, Delegate value)
         {
             Global.FastAddProperty(name, new DelegateWrapper(this, value), true, false, true);
             return this;
         }
-
+*/
         public Engine SetValue(string name, string value)
         {
             return SetValue(name, (JsValue) value);

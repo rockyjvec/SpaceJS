@@ -5,7 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Jint.Native.Array;
-using Jint.Native.Date;
+//using Jint.Native.Date;
 using Jint.Native.Iterator;
 using Jint.Native.Object;
 using Jint.Native.RegExp;
@@ -42,10 +42,10 @@ namespace Jint.Native
             return this is ArrayInstance;
         }
 
-        public bool IsDate()
-        {
-            return this is DateInstance;
-        }
+//        public bool IsDate()
+  //      {
+    //        return this is DateInstance;
+      //  }
 
         public bool IsRegExp()
         {
@@ -147,7 +147,7 @@ namespace Jint.Native
             return new IteratorInstance.ObjectWrapper(obj);
         }
 
-        public DateInstance AsDate()
+/*        public DateInstance AsDate()
         {
             if (!IsDate())
             {
@@ -155,7 +155,7 @@ namespace Jint.Native
             }
             return this as DateInstance;
         }
-
+*/
         public RegExpInstance AsRegExp()
         {
             if (!IsRegExp())
@@ -255,8 +255,10 @@ namespace Jint.Native
             var type = value as Type;
             if (type != null)
             {
-                var typeReference = TypeReference.CreateTypeReference(engine, type);
-                return typeReference;
+                throw new Exception("TODO: type reference in JsValue");
+                
+                //var typeReference = TypeReference.CreateTypeReference(engine, type);
+                //return typeReference;
             }
 
             if (value is System.Array)
@@ -273,7 +275,8 @@ namespace Jint.Native
 
             if (value is Delegate)
             {
-                return new DelegateWrapper(engine, value as Delegate);
+                throw new Exception("TODO: delegate wrapper in JsValue");
+//                return new DelegateWrapper(engine, value as Delegate);
             }
 
             

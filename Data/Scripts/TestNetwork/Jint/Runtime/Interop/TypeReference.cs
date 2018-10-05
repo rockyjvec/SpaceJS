@@ -10,6 +10,7 @@ using Jint.Runtime.Descriptors.Specialized;
 
 namespace Jint.Runtime.Interop
 {
+    /*
     public sealed class TypeReference : FunctionInstance, IConstructor, IObjectWrapper
     {
         private TypeReference(Engine engine)
@@ -158,7 +159,7 @@ namespace Jint.Runtime.Interop
         public override PropertyDescriptor GetOwnProperty(string propertyName)
         {
             // todo: cache members locally
-/*
+
             if (ReferenceType.IsEnum)
             {
                 Array enumValues = Enum.GetValues(ReferenceType);
@@ -200,11 +201,11 @@ namespace Jint.Runtime.Interop
             {
                 return PropertyDescriptor.Undefined;
             }
-*/
-            // TODO: SpaceEngineers doesn't allow MethodInfo
-            return default(PropertyDescriptor);//new PropertyDescriptor(new MethodInfoFunctionInstance(Engine, methodInfo.ToArray()), PropertyFlag.AllForbidden);
+
+            return new PropertyDescriptor(new MethodInfoFunctionInstance(Engine, methodInfo.ToArray()), PropertyFlag.AllForbidden);
         }
 
         public object Target => ReferenceType;
     }
+    */
 }

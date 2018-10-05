@@ -20,7 +20,7 @@ namespace Jint
         private int _maxRecursionDepth = -1;
         private TimeSpan _timeoutInterval;
         private CultureInfo _culture = CultureInfo.CurrentCulture;
-        private TimeZoneInfo _localTimeZone = TimeZoneInfo.Local;
+//        private TimeZoneInfo _localTimeZone = TimeZoneInfo.Local;
 //        private List<Assembly> _lookupAssemblies = new List<Assembly>();
 //        private Predicate<Exception> _clrExceptionsHandler;
         private IReferenceResolver _referenceResolver;
@@ -93,7 +93,7 @@ namespace Jint
         /// </summary>
         public Options CatchClrExceptions()
         {
-            CatchClrExceptions(_ => true);
+//            CatchClrExceptions(_ => true);
             return this;
         }
 
@@ -146,11 +146,11 @@ namespace Jint
             return this;
         }
 
-        public Options LocalTimeZone(TimeZoneInfo timeZoneInfo)
-        {
-            _localTimeZone = timeZoneInfo;
-            return this;
-        }
+//        public Options LocalTimeZone(TimeZoneInfo timeZoneInfo)
+  //      {
+    //        _localTimeZone = timeZoneInfo;
+      //      return this;
+       // }
 
         public Options SetReferencesResolver(IReferenceResolver resolver)
         {
@@ -184,7 +184,7 @@ namespace Jint
 
         internal CultureInfo _Culture => _culture;
 
-        internal TimeZoneInfo _LocalTimeZone => _localTimeZone;
+//        internal TimeZoneInfo _LocalTimeZone => _localTimeZone;
 
         internal IReferenceResolver  ReferenceResolver => _referenceResolver;
 

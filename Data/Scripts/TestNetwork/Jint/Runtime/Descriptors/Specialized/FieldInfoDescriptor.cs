@@ -4,6 +4,7 @@ using Jint.Native;
 
 namespace Jint.Runtime.Descriptors.Specialized
 {
+    /*
     public sealed class FieldInfoDescriptor : PropertyDescriptor
     {
         private readonly Engine _engine;
@@ -44,4 +45,5 @@ namespace Jint.Runtime.Descriptors.Specialized
             }
         }
     }
+    */
 }

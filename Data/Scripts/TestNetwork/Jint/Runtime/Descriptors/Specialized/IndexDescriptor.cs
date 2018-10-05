@@ -5,6 +5,7 @@ using Jint.Native;
 
 namespace Jint.Runtime.Descriptors.Specialized
 {
+    /*
     public sealed class IndexDescriptor : PropertyDescriptor
     {
         private readonly Engine _engine;
@@ -104,4 +105,5 @@ namespace Jint.Runtime.Descriptors.Specialized
             }
         }
     }
+    */
 }

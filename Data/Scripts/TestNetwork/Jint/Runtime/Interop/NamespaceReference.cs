@@ -8,6 +8,7 @@ using Jint.Runtime.Descriptors;
 
 namespace Jint.Runtime.Interop
 {
+    /*
     /// <summary>
     /// Any instance on this class represents a reference to a CLR namespace.
     /// Accessing its properties will look for a class of the full name, or instantiate
@@ -120,8 +121,7 @@ namespace Jint.Runtime.Interop
 
             // search in lookup assemblies
             var comparedPath = path.Replace("+", ".");
-            // TODO
-/*            foreach (var assembly in _engine.Options._LookupAssemblies)
+            foreach (var assembly in _engine.Options._LookupAssemblies)
             {
                 type = assembly.GetType(path);
                 if (type != null)
@@ -144,7 +144,7 @@ namespace Jint.Runtime.Interop
                         }
                     }
                 }
-            }*/
+            }
 
             // search for type in mscorlib
             type = System.Type.GetType(path);
@@ -168,7 +168,7 @@ namespace Jint.Runtime.Interop
         /// <returns>   The type. </returns>
         private static Type GetType(object assembly, string typeName)
         {
-/*            var compared = typeName.Replace("+", ".");
+            var compared = typeName.Replace("+", ".");
             Type[] types = assembly.GetTypes();
             foreach (Type t in types)
             {
@@ -177,7 +177,7 @@ namespace Jint.Runtime.Interop
                     return t;
                 }
             }
-*/
+
             return null;
         }
 
@@ -190,12 +190,12 @@ namespace Jint.Runtime.Interop
 
         private static void AddNestedTypesRecursively(List<Type> types, Type type)
         {
-/*            Type[] nestedTypes = type.GetNestedTypes(BindingFlags.Public);
+            Type[] nestedTypes = type.GetNestedTypes(BindingFlags.Public);
             foreach (Type nestedType in nestedTypes)
             {
                 types.Add(nestedType);
                 AddNestedTypesRecursively(types, nestedType);
-            }*/
+            }
         }
 
         public override PropertyDescriptor GetOwnProperty(string propertyName)
@@ -208,4 +208,5 @@ namespace Jint.Runtime.Interop
             return "[Namespace: " + _path + "]";
         }
     }
+    */
 }

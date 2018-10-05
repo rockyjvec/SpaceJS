@@ -114,7 +114,7 @@ namespace Jint.Runtime
 
         public static void ThrowPlatformNotSupportedException(string message)
         {
-            throw new PlatformNotSupportedException(message);
+            throw new Exception();
         }
 
         public static void ThrowMemoryLimitExceededException(string message)

@@ -644,7 +644,9 @@ namespace Jint.Runtime
             for (var i = 0; i < propertiesCount; i++)
             {
                 var property = objectExpression.Properties[i];
-                var propName = property.Key.GetKey();
+//                var propName = property.Key.GetKey();
+var propName = "";//property.Key;
+throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()");
                 PropertyDescriptor previous;
                 if (!obj._properties.TryGetValue(propName, out previous))
                 {

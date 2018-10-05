@@ -4,7 +4,6 @@ using System.Dynamic;
 using System.Runtime.CompilerServices;
 using Jint.Native.Array;
 using Jint.Native.Boolean;
-using Jint.Native.Date;
 using Jint.Native.Function;
 using Jint.Native.Number;
 using Jint.Native.RegExp;
@@ -425,7 +424,7 @@ namespace Jint.Native.Object
         {
             EnsureInitialized();
 
-            if (hint == Types.String || (hint == Types.None && Class == "Date"))
+            if (hint == Types.String /*|| (hint == Types.None && Class == "Date")*/)
             {
                 if (Get("toString") is ICallable)
                 {
@@ -789,7 +788,7 @@ namespace Jint.Native.Object
 
                     break;
 
-                case "Date":
+/*                case "Date":
                     if (this is DateInstance)
                     {
                         var dateInstance = this as DateInstance;
@@ -797,7 +796,7 @@ namespace Jint.Native.Object
                     }
 
                     break;
-
+*/
                 case "Boolean":
                     if (this is BooleanInstance)
                     {
@@ -838,11 +837,7 @@ namespace Jint.Native.Object
 
                 case "Arguments":
                 case "Object":
-#if __IOS__
-                                IDictionary<string, object> o = new Dictionary<string, object>();
-#else
-                    IDictionary<string, object> o = new ExpandoObject();
-#endif
+                    IDictionary<string, object> o = new Dictionary<string, object>();
 
                     foreach (var p in GetOwnProperties())
                     {

@@ -170,10 +170,11 @@ namespace Jint.Runtime
 
                 return i;
             }
-            catch (OverflowException)
-            {
-                return s.StartsWith("-") ? double.NegativeInfinity : double.PositiveInfinity;
-            }
+            // TODO
+        //    catch (OverflowException)
+          //  {
+            //    return s.StartsWith("-") ? double.NegativeInfinity : double.PositiveInfinity;
+           // }
             catch
             {
                 return double.NaN;
@@ -397,7 +398,7 @@ namespace Jint.Runtime
                 ExceptionHelper.ThrowTypeError(engine);
             }
         }
-
+/*
         public static IEnumerable<MethodBase> FindBestMatch<T>(T[] methods, JsValue[] arguments) where T : MethodBase
         {
             var matchingByParameterCount = new List<T>();
@@ -426,7 +427,7 @@ namespace Jint.Runtime
 
                     if (arg == null)
                     {
-                        if (!TypeIsNullable(paramType))
+                        if (!TypeIsNullable(paramType, arg))
                         {
                             perfectMatch = false;
                             break;
@@ -452,9 +453,10 @@ namespace Jint.Runtime
             }
         }
 
-        public static bool TypeIsNullable(Type type)
+        public static bool TypeIsNullable(Type type, object arg)
         {
-            return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
+            return !(arg is ValueType) || Nullable.GetUnderlyingType(type) != null;
         }
+        */
     }
 }

@@ -7,6 +7,7 @@ using Jint.Native.Function;
 
 namespace Jint.Runtime.Interop
 {
+/*
     public sealed class MethodInfoFunctionInstance : FunctionInstance
     {
         private readonly MethodInfo[] _methods;
@@ -85,13 +86,13 @@ namespace Jint.Runtime.Interop
                 catch (TargetInvocationException exception)
                 {
                     var meaningfulException = exception.InnerException ?? exception;
-                    // TODO
-//                    var handler = Engine.Options._ClrExceptionsHandler;
-//
-  //                  if (handler != null && handler(meaningfulException))
-    //                {
-      //                  ExceptionHelper.ThrowError(_engine, meaningfulException.Message);
-        //            }
+
+                    var handler = Engine.Options._ClrExceptionsHandler;
+
+                    if (handler != null && handler(meaningfulException))
+                    {
+                        ExceptionHelper.ThrowError(_engine, meaningfulException.Message);
+                    }
 
                     throw meaningfulException;
                 }
@@ -148,4 +149,5 @@ namespace Jint.Runtime.Interop
         }
 
     }
+    */
 }

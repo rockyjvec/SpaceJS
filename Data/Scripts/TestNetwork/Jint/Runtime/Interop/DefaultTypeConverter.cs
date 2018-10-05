@@ -7,6 +7,7 @@ using Jint.Native;
 
 namespace Jint.Runtime.Interop
 {
+    /*
     public class DefaultTypeConverter : ITypeConverter
     {
         private readonly Engine _engine;
@@ -248,4 +249,5 @@ namespace Jint.Runtime.Interop
             return false;
         }
     }
+    */
 }

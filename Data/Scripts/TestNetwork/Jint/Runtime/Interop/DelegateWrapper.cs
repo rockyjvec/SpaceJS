@@ -6,6 +6,7 @@ using Jint.Native.Function;
 
 namespace Jint.Runtime.Interop
 {
+    /*
     /// <summary>
     /// Represents a FunctionInstance wrapper around a CLR method. This is used by user to pass
     /// custom methods to the engine.
@@ -110,16 +111,16 @@ namespace Jint.Runtime.Interop
             catch (TargetInvocationException exception)
             {
                 var meaningfulException = exception.InnerException ?? exception;
-                // TODO
-/*                var handler = Engine.Options._ClrExceptionsHandler;
+                var handler = Engine.Options._ClrExceptionsHandler;
 
                 if (handler != null && handler(meaningfulException))
                 {
                     ExceptionHelper.ThrowError(_engine, meaningfulException.Message);
                 }
-*/
+
                 throw meaningfulException;
             }
         }
     }
+    */
 }
