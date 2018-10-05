@@ -13,19 +13,21 @@ using VRage.Game.GUI.TextPanel;
 using Sandbox.Game.Entities;
 using Jint;
 using System;
+using Jint.Runtime.Debugger;
 
 namespace rockyjvec.SpaceJS
 {
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
     public class SpaceJS : MySessionComponentBase
     {
+
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             base.Init(sessionComponent);
 
             try {
-                var engine = new Engine();
-        
+                var engine = new Engine(options => options.DebugMode(false));
+
                 engine.Execute(@"
                   function hello() { 
                     console.log('Hello World');
@@ -33,10 +35,11 @@ namespace rockyjvec.SpaceJS
                   
                   hello();
                 ");
+                
             }
             catch (Exception e)
             {
-                MyAPIGateway.Utilities.ShowMessage("SpaceJS", e.ToString());                
+                MyAPIGateway.Utilities.ShowMessage("SpaceJS", e.ToString());
             }
         }
     }

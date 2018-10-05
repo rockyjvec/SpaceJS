@@ -28,6 +28,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Environments;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
+using Sandbox.ModAPI;
 
 namespace Jint
 {
@@ -235,6 +236,9 @@ namespace Jint
 
             // gather some options as fields for faster checks
             _isDebugMode = Options.IsDebugMode;
+            
+            if(_isDebugMode) MyAPIGateway.Utilities.ShowMessage("SpaceJS", "Debug mode enabled.");
+
             _isStrict = Options.IsStrict;
             _maxStatements = Options._MaxStatements;
             _referenceResolver = Options.ReferenceResolver;
