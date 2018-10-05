@@ -30,15 +30,14 @@ namespace rockyjvec.SpaceJS
                   function hello() { 
                     console.log('Hello World');
                   };
-                  setTimeout(hello, 10000);
+                  
+                  hello();
                 ");
             }
             catch (Exception e)
             {
                 MyAPIGateway.Utilities.ShowMessage("SpaceJS", e.ToString());                
             }
-            
-            MyAPIGateway.Utilities.ShowMessage("SpaceJS", "Started.");
         }
     }
 }
