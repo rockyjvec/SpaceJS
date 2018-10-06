@@ -11,13 +11,14 @@ using Sandbox.Game.Gui;
 using Sandbox.Game.Localization;
 using VRage.Game.GUI.TextPanel;
 using Sandbox.Game.Entities;
-using Jint;
 using System;
 using Jint.Runtime.Debugger;
 using System.Collections.Generic;
 using Sandbox.ModAPI.Interfaces.Terminal;
 using VRage.Utils;
 using System.Text;
+using SpaceJS;
+using VRage.ObjectBuilders;
 
 namespace SpaceJS
 {
@@ -96,29 +97,38 @@ namespace SpaceJS
         
         void JSRun(IMyTerminalBlock pb)
         {
-            UpdateCustomInfo(pb, "");
+            UpdateCustomInfo("");
             try 
             {
-                var engine = new Engine(options => options.DebugMode(false));
+                var engine = Engine.Create(options => options.DebugMode(false), this);
 
                 engine.Execute(pb.CustomData);                
             }
             catch (Exception e)
             {
-                UpdateCustomInfo(pb, e.ToString());
+                UpdateCustomInfo(e.ToString());
             }
 
         }
         
-        public void UpdateCustomInfo(IMyTerminalBlock pb, string text)
+        public void UpdateCustomInfo(string text)
         {
             CustomInfo = text;
-            pb.RefreshCustomInfo();
-            var b = pb as IMyProgrammableBlock;
+            tb.RefreshCustomInfo();
+            var b = tb as IMyProgrammableBlock;
             b.Enabled = !b.Enabled;
             b.Enabled = !b.Enabled;
         }
-        
+
+        public void AppendCustomInfo(string text)
+        {
+            CustomInfo += text;
+            tb.RefreshCustomInfo();
+            var b = tb as IMyProgrammableBlock;
+            b.Enabled = !b.Enabled;
+            b.Enabled = !b.Enabled;
+        }
+
         public void AppendingCustomInfo(IMyTerminalBlock pb, StringBuilder str)
         {
             str.Clear();

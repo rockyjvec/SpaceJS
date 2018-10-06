@@ -5,16 +5,20 @@ using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Sandbox.ModAPI;
+using Jint;
+using Jint.Native;
 
-namespace Jint.Native.Console
+namespace SpaceJS.Api.Console
 {
     public sealed class ConsoleInstance : ObjectInstance
     {
-        private ConsoleInstance(Engine engine) : base(engine, "console")
+        private SpaceJS mod;
+
+        private ConsoleInstance(Jint.Engine engine) : base(engine, "console")
         {
         }
 
-        public static ConsoleInstance CreateConsoleObject(Engine engine)
+        public static ConsoleInstance CreateConsoleObject(Jint.Engine engine)
         {
             var console = new ConsoleInstance(engine);
             console.Extensible = true;
@@ -23,16 +27,18 @@ namespace Jint.Native.Console
             return console;
         }
 
-        public void Configure()
+        public void Configure(SpaceJS mod)
         {
+            this.mod = mod;
+
             FastAddProperty("log", new ClrFunctionInstance(Engine, "log", Log), true, false, true);
         }
 
-        private static JsValue Log(JsValue thisObject, JsValue[] arguments)
+        private JsValue Log(JsValue thisObject, JsValue[] arguments)
         {
             var message = TypeConverter.ToString(arguments.At(0));
 
-            MyAPIGateway.Utilities.ShowMessage("SpaceJS", message);
+            mod.AppendCustomInfo(message + "\n");
             
             return message;
         }

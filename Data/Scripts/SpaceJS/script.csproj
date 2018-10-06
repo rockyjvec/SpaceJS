@@ -1,0 +1,318 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{EBDF9B6E-C9B1-496A-93EE-B5CC1CEA7727}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TestScript</RootNamespace>
+    <AssemblyName>TestScript</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Sandbox.Game">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineersModSDK\..\SpaceEngineers\Bin64\\Sandbox.Game.dll</HintPath>
+    </Reference>
+    <Reference Include="Sandbox.Common">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineersModSDK\..\SpaceEngineers\Bin64\\Sandbox.Common.dll </HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="VRage">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineersModSDK\..\SpaceEngineers\Bin64\\VRage.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Library">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineersModSDK\..\SpaceEngineers\Bin64\\VRage.Library.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Math">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineersModSDK\..\SpaceEngineers\Bin64\\VRage.Math.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Game">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineersModSDK\..\SpaceEngineers\Bin64\\VRage.Game.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Render">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineersModSDK\..\SpaceEngineers\Bin64\\VRage.Render.dll</HintPath>
+    </Reference>
+    <Reference Include="SpaceEngineers.ObjectBuilders">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineersModSDK\..\SpaceEngineers\Bin64\\SpaceEngineers.ObjectBuilders.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Esprima\Ast\ArgumentListElement.cs" />
+    <Compile Include="Esprima\Ast\ArrayExpression.cs" />
+    <Compile Include="Esprima\Ast\ArrayExpressionElement.cs" />
+    <Compile Include="Esprima\Ast\ArrayPattern.cs" />
+    <Compile Include="Esprima\Ast\ArrayPatternElement.cs" />
+    <Compile Include="Esprima\Ast\ArrowFunctionExpression.cs" />
+    <Compile Include="Esprima\Ast\ArrowParameterPlaceHolder.cs" />
+    <Compile Include="Esprima\Ast\AssignmentExpression.cs" />
+    <Compile Include="Esprima\Ast\AssignmentPattern.cs" />
+    <Compile Include="Esprima\Ast\BinaryExpression.cs" />
+    <Compile Include="Esprima\Ast\BindingIdentifier.cs" />
+    <Compile Include="Esprima\Ast\BindingPattern.cs" />
+    <Compile Include="Esprima\Ast\BlockStatement.cs" />
+    <Compile Include="Esprima\Ast\BreakStatement.cs" />
+    <Compile Include="Esprima\Ast\CallExpression.cs" />
+    <Compile Include="Esprima\Ast\CatchClause.cs" />
+    <Compile Include="Esprima\Ast\ClassBody.cs" />
+    <Compile Include="Esprima\Ast\ClassDeclaration.cs" />
+    <Compile Include="Esprima\Ast\ClassElement.cs" />
+    <Compile Include="Esprima\Ast\ClassExpression.cs" />
+    <Compile Include="Esprima\Ast\ComputedMemberExpression.cs" />
+    <Compile Include="Esprima\Ast\ConditionalExpression.cs" />
+    <Compile Include="Esprima\Ast\ContinueStatement.cs" />
+    <Compile Include="Esprima\Ast\DebuggerStatement.cs" />
+    <Compile Include="Esprima\Ast\Declaration.cs" />
+    <Compile Include="Esprima\Ast\Directive.cs" />
+    <Compile Include="Esprima\Ast\DoWhileStatement.cs" />
+    <Compile Include="Esprima\Ast\EmptyStatement.cs" />
+    <Compile Include="Esprima\Ast\ExportAllDeclaration.cs" />
+    <Compile Include="Esprima\Ast\ExportDeclaration.cs" />
+    <Compile Include="Esprima\Ast\ExportDefaultDeclaration.cs" />
+    <Compile Include="Esprima\Ast\ExportNamedDeclaration.cs" />
+    <Compile Include="Esprima\Ast\ExportSpecifier.cs" />
+    <Compile Include="Esprima\Ast\ExportStatement.cs" />
+    <Compile Include="Esprima\Ast\Expression.cs" />
+    <Compile Include="Esprima\Ast\ExpressionStatement.cs" />
+    <Compile Include="Esprima\Ast\ForInStatement.cs" />
+    <Compile Include="Esprima\Ast\ForOfStatement.cs" />
+    <Compile Include="Esprima\Ast\ForStatement.cs" />
+    <Compile Include="Esprima\Ast\FunctionDeclaration.cs" />
+    <Compile Include="Esprima\Ast\FunctionExpression.cs" />
+    <Compile Include="Esprima\Ast\FunctionParameter.cs" />
+    <Compile Include="Esprima\Ast\IArrayPatternElement.cs" />
+    <Compile Include="Esprima\Ast\Identifier.cs" />
+    <Compile Include="Esprima\Ast\IfStatement.cs" />
+    <Compile Include="Esprima\Ast\IFunction.cs" />
+    <Compile Include="Esprima\Ast\ImportDeclaration.cs" />
+    <Compile Include="Esprima\Ast\ImportDeclarationSpecifier.cs" />
+    <Compile Include="Esprima\Ast\ImportDefaultSpecifier.cs" />
+    <Compile Include="Esprima\Ast\ImportNamespaceSpecifier.cs" />
+    <Compile Include="Esprima\Ast\ImportSpecifier.cs" />
+    <Compile Include="Esprima\Ast\INode.cs" />
+    <Compile Include="Esprima\Ast\LabeledStatement.cs" />
+    <Compile Include="Esprima\Ast\Literal.cs" />
+    <Compile Include="Esprima\Ast\MemberExpression.cs" />
+    <Compile Include="Esprima\Ast\MetaProperty.cs" />
+    <Compile Include="Esprima\Ast\MethodDefinition.cs" />
+    <Compile Include="Esprima\Ast\NewExpression.cs" />
+    <Compile Include="Esprima\Ast\Node.cs" />
+    <Compile Include="Esprima\Ast\Nodes.cs" />
+    <Compile Include="Esprima\Ast\ObjectExpression.cs" />
+    <Compile Include="Esprima\Ast\ObjectPattern.cs" />
+    <Compile Include="Esprima\Ast\Program.cs" />
+    <Compile Include="Esprima\Ast\Property.cs" />
+    <Compile Include="Esprima\Ast\PropertyValue.cs" />
+    <Compile Include="Esprima\Ast\RegexValue.cs" />
+    <Compile Include="Esprima\Ast\RestElement.cs" />
+    <Compile Include="Esprima\Ast\ReturnStatement.cs" />
+    <Compile Include="Esprima\Ast\SequenceExpression.cs" />
+    <Compile Include="Esprima\Ast\SpreadElement.cs" />
+    <Compile Include="Esprima\Ast\Statement.cs" />
+    <Compile Include="Esprima\Ast\StatementListItem.cs" />
+    <Compile Include="Esprima\Ast\StaticMemberExpression.cs" />
+    <Compile Include="Esprima\Ast\Super.cs" />
+    <Compile Include="Esprima\Ast\SwitchCase.cs" />
+    <Compile Include="Esprima\Ast\SwitchStatement.cs" />
+    <Compile Include="Esprima\Ast\TaggedTemplateExpression.cs" />
+    <Compile Include="Esprima\Ast\TemplateElement.cs" />
+    <Compile Include="Esprima\Ast\TemplateLiteral.cs" />
+    <Compile Include="Esprima\Ast\ThisExpression.cs" />
+    <Compile Include="Esprima\Ast\ThrowStatement.cs" />
+    <Compile Include="Esprima\Ast\TryStatement.cs" />
+    <Compile Include="Esprima\Ast\UnaryExpression.cs" />
+    <Compile Include="Esprima\Ast\UpdateExpression.cs" />
+    <Compile Include="Esprima\Ast\VariableDeclaration.cs" />
+    <Compile Include="Esprima\Ast\VariableDeclarator.cs" />
+    <Compile Include="Esprima\Ast\WhileStatement.cs" />
+    <Compile Include="Esprima\Ast\WithStatement.cs" />
+    <Compile Include="Esprima\Ast\YieldExpression.cs" />
+    <Compile Include="Esprima\Character.cs" />
+    <Compile Include="Esprima\Comment.cs" />
+    <Compile Include="Esprima\ErrorHandler.cs" />
+    <Compile Include="Esprima\ErrorHandlerExtensions.cs" />
+    <Compile Include="Esprima\HoistingScope.cs" />
+    <Compile Include="Esprima\IErrorHandler.cs" />
+    <Compile Include="Esprima\JavascriptParser.cs" />
+    <Compile Include="Esprima\LiteralValueConverter.cs" />
+    <Compile Include="Esprima\Loc.cs" />
+    <Compile Include="Esprima\Messages.cs" />
+    <Compile Include="Esprima\ParserException.cs" />
+    <Compile Include="Esprima\ParserExtensions.cs" />
+    <Compile Include="Esprima\ParserOptions.cs" />
+    <Compile Include="Esprima\Position.cs" />
+    <Compile Include="Esprima\Scanner.cs" />
+    <Compile Include="Esprima\SourceType.cs" />
+    <Compile Include="Esprima\State.cs" />
+    <Compile Include="Esprima\Token.cs" />
+    <Compile Include="Esprima\Utils\EsprimaVisitor.cs" />
+    <Compile Include="Jint\ArrayExt.cs" />
+    <Compile Include="Jint\DeclarationBindingType.cs" />
+    <Compile Include="Jint\Engine.cs" />
+    <Compile Include="Jint\EvalCodeScope.cs" />
+    <Compile Include="Jint\JsValueExtensions.cs" />
+    <Compile Include="Jint\Native\Argument\ArgumentsInstance.cs" />
+    <Compile Include="Jint\Native\Array\ArrayConstructor.cs" />
+    <Compile Include="Jint\Native\Array\ArrayExecutionContext.cs" />
+    <Compile Include="Jint\Native\Array\ArrayInstance.cs" />
+    <Compile Include="Jint\Native\Array\ArrayPrototype.cs" />
+    <Compile Include="Jint\Native\Array\IArrayLike.cs" />
+    <Compile Include="Jint\Native\Boolean\BooleanConstructor.cs" />
+    <Compile Include="Jint\Native\Boolean\BooleanInstance.cs" />
+    <Compile Include="Jint\Native\Boolean\BooleanPrototype.cs" />
+    <Compile Include="SpaceJS\Api\Console\ConsoleInstance.cs" />
+    <Compile Include="Jint\Native\Error\ErrorConstructor.cs" />
+    <Compile Include="Jint\Native\Error\ErrorInstance.cs" />
+    <Compile Include="Jint\Native\Error\ErrorPrototype.cs" />
+    <Compile Include="Jint\Native\Function\BindFunctionInstance.cs" />
+    <Compile Include="Jint\Native\Function\EvalFunctionInstance.cs" />
+    <Compile Include="Jint\Native\Function\FunctionConstructor.cs" />
+    <Compile Include="Jint\Native\Function\FunctionInstance.cs" />
+    <Compile Include="Jint\Native\Function\FunctionPrototype.cs" />
+    <Compile Include="Jint\Native\Function\FunctionShim.cs" />
+    <Compile Include="Jint\Native\Function\ScriptFunctionInstance.cs" />
+    <Compile Include="Jint\Native\Function\ThrowTypeError.cs" />
+    <Compile Include="Jint\Native\Global\GlobalObject.cs" />
+    <Compile Include="Jint\Native\ICallable.cs" />
+    <Compile Include="Jint\Native\IConstructor.cs" />
+    <Compile Include="Jint\Native\IPrimitiveInstance.cs" />
+    <Compile Include="Jint\Native\Iterator\IIterator.cs" />
+    <Compile Include="Jint\Native\Iterator\IteratorConstructor.cs" />
+    <Compile Include="Jint\Native\Iterator\IteratorInstance.cs" />
+    <Compile Include="Jint\Native\Iterator\IteratorPrototype.cs" />
+    <Compile Include="Jint\Native\JsBoolean.cs" />
+    <Compile Include="Jint\Native\JsNull.cs" />
+    <Compile Include="Jint\Native\JsNumber.cs" />
+    <Compile Include="Jint\Native\Json\JsonInstance.cs" />
+    <Compile Include="Jint\Native\Json\JsonParser.cs" />
+    <Compile Include="Jint\Native\Json\JsonSerializer.cs" />
+    <Compile Include="Jint\Native\JsString.cs" />
+    <Compile Include="Jint\Native\JsSymbol.cs" />
+    <Compile Include="Jint\Native\JsUndefined.cs" />
+    <Compile Include="Jint\Native\JsValue.cs" />
+    <Compile Include="Jint\Native\Map\MapConstructor.cs" />
+    <Compile Include="Jint\Native\Map\MapInstance.cs" />
+    <Compile Include="Jint\Native\Map\MapPrototype.cs" />
+    <Compile Include="Jint\Native\Math\MathInstance.cs" />
+    <Compile Include="Jint\Native\Null.cs" />
+    <Compile Include="Jint\Native\Number\Dtoa\CachePowers.cs" />
+    <Compile Include="Jint\Native\Number\Dtoa\DiyFp.cs" />
+    <Compile Include="Jint\Native\Number\Dtoa\DoubleHelper.cs" />
+    <Compile Include="Jint\Native\Number\Dtoa\FastDtoa.cs" />
+    <Compile Include="Jint\Native\Number\Dtoa\FastDtoaBuilder.cs" />
+    <Compile Include="Jint\Native\Number\Dtoa\NumberExtensions.cs" />
+    <Compile Include="Jint\Native\Number\NumberConstructor.cs" />
+    <Compile Include="Jint\Native\Number\NumberInstance.cs" />
+    <Compile Include="Jint\Native\Number\NumberPrototype.cs" />
+    <Compile Include="Jint\Native\Object\ObjectConstructor.cs" />
+    <Compile Include="Jint\Native\Object\ObjectInstance.cs" />
+    <Compile Include="Jint\Native\Object\ObjectPrototype.cs" />
+    <Compile Include="Jint\Native\RegExp\RegExpConstructor.cs" />
+    <Compile Include="Jint\Native\RegExp\RegExpInstance.cs" />
+    <Compile Include="Jint\Native\RegExp\RegExpPrototype.cs" />
+    <Compile Include="Jint\Native\Set\SetConstructor.cs" />
+    <Compile Include="Jint\Native\Set\SetInstance.cs" />
+    <Compile Include="Jint\Native\Set\SetPrototype.cs" />
+    <Compile Include="Jint\Native\String\StringConstructor.cs" />
+    <Compile Include="Jint\Native\String\StringExecutionContext.cs" />
+    <Compile Include="Jint\Native\String\StringInstance.cs" />
+    <Compile Include="Jint\Native\String\StringPrototype.cs" />
+    <Compile Include="Jint\Native\Symbol\GlobalSymbolRegistry.cs" />
+    <Compile Include="Jint\Native\Symbol\SymbolConstructor.cs" />
+    <Compile Include="Jint\Native\Symbol\SymbolInstance.cs" />
+    <Compile Include="Jint\Native\Symbol\SymbolPrototype.cs" />
+    <Compile Include="Jint\Native\Undefined.cs" />
+    <Compile Include="Jint\Options.cs" />
+    <Compile Include="Jint\Pooling\ArgumentsInstancePool.cs" />
+    <Compile Include="Jint\Pooling\JsValueArrayPool.cs" />
+    <Compile Include="Jint\Pooling\ObjectPool.cs" />
+    <Compile Include="Jint\Pooling\ReferencePool.cs" />
+    <Compile Include="Jint\Runtime\Arguments.cs" />
+    <Compile Include="Jint\Runtime\CallStack\CallStackElement.cs" />
+    <Compile Include="Jint\Runtime\CallStack\CallStackElementComparer.cs" />
+    <Compile Include="Jint\Runtime\CallStack\JintCallStack.cs" />
+    <Compile Include="Jint\Runtime\Completion.cs" />
+    <Compile Include="Jint\Runtime\Debugger\BreakPoint.cs" />
+    <Compile Include="Jint\Runtime\Debugger\DebugHandler.cs" />
+    <Compile Include="Jint\Runtime\Debugger\DebugInformation.cs" />
+    <Compile Include="Jint\Runtime\Debugger\StepMode.cs" />
+    <Compile Include="Jint\Runtime\Descriptors\PropertyDescriptor.cs" />
+    <Compile Include="Jint\Runtime\Descriptors\PropertyFlag.cs" />
+    <Compile Include="Jint\Runtime\Descriptors\Specialized\ClrAccessDescriptor.cs" />
+    <Compile Include="Jint\Runtime\Descriptors\Specialized\FieldInfoDescriptor.cs" />
+    <Compile Include="Jint\Runtime\Descriptors\Specialized\GetSetPropertyDescriptor.cs" />
+    <Compile Include="Jint\Runtime\Descriptors\Specialized\IndexDescriptor.cs" />
+    <Compile Include="Jint\Runtime\Descriptors\Specialized\PropertyInfoDescriptor.cs" />
+    <Compile Include="Jint\Runtime\Environments\Binding.cs" />
+    <Compile Include="Jint\Runtime\Environments\DeclarativeEnvironmentRecord.cs" />
+    <Compile Include="Jint\Runtime\Environments\EnvironmentRecord.cs" />
+    <Compile Include="Jint\Runtime\Environments\ExecutionContext.cs" />
+    <Compile Include="Jint\Runtime\Environments\LexicalEnvironment.cs" />
+    <Compile Include="Jint\Runtime\Environments\ObjectEnvironmentRecord.cs" />
+    <Compile Include="Jint\Runtime\ExceptionHelper.cs" />
+    <Compile Include="Jint\Runtime\ExpressionIntepreter.cs" />
+    <Compile Include="Jint\Runtime\Interop\ClrFunctionInstance.cs" />
+    <Compile Include="Jint\Runtime\Interop\DefaultTypeConverter.cs" />
+    <Compile Include="Jint\Runtime\Interop\DelegateWrapper.cs" />
+    <Compile Include="Jint\Runtime\Interop\GetterFunctionInstance.cs" />
+    <Compile Include="Jint\Runtime\Interop\IObjectConverter.cs" />
+    <Compile Include="Jint\Runtime\Interop\IObjectWrapper.cs" />
+    <Compile Include="Jint\Runtime\Interop\IReferenceResolver.cs" />
+    <Compile Include="Jint\Runtime\Interop\ITypeConverter.cs" />
+    <Compile Include="Jint\Runtime\Interop\MethodInfoFunctionInstance.cs" />
+    <Compile Include="Jint\Runtime\Interop\NamespaceReference.cs" />
+    <Compile Include="Jint\Runtime\Interop\ObjectWrapper.cs" />
+    <Compile Include="Jint\Runtime\Interop\SetterFunctionInstance.cs" />
+    <Compile Include="Jint\Runtime\Interop\TypeReference.cs" />
+    <Compile Include="Jint\Runtime\Interop\TypeReferencePrototype.cs" />
+    <Compile Include="Jint\Runtime\JavaScriptException.cs" />
+    <Compile Include="Jint\Runtime\MemoryLimitExceededException.cs" />
+    <Compile Include="Jint\Runtime\OrderedDictionary.cs" />
+    <Compile Include="Jint\Runtime\OrderedSet.cs" />
+    <Compile Include="Jint\Runtime\RecursionDepthOverflowException.cs" />
+    <Compile Include="Jint\Runtime\References\Reference.cs" />
+    <Compile Include="Jint\Runtime\RefStack.cs" />
+    <Compile Include="Jint\Runtime\StatementInterpreter.cs" />
+    <Compile Include="Jint\Runtime\StatementsCountOverflowException.cs" />
+    <Compile Include="Jint\Runtime\StructDictionary.cs" />
+    <Compile Include="Jint\Runtime\TypeConverter.cs" />
+    <Compile Include="Jint\StrictModeScope.cs" />
+    <Compile Include="SpaceJS\Engine.cs" />
+    <Compile Include="SpaceJS\SpaceJS.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.  
+       Other similar extension points exist, see Microsoft.Common.targets. 
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

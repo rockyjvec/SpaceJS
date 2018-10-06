@@ -12,7 +12,6 @@ using Jint.Native.Global;
 using Jint.Native.Iterator;
 using Jint.Native.Json;
 using Jint.Native.Map;
-using Jint.Native.Console;
 using Jint.Native.Math;
 using Jint.Native.Number;
 using Jint.Native.Object;
@@ -162,7 +161,6 @@ namespace Jint
             Number = NumberConstructor.CreateNumberConstructor(this);
             Boolean = BooleanConstructor.CreateBooleanConstructor(this);
 //            Date = DateConstructor.CreateDateConstructor(this);
-            Console = ConsoleInstance.CreateConsoleObject(this);
             Math = MathInstance.CreateMathObject(this);
             Json = JsonInstance.CreateJsonObject(this);
 
@@ -217,7 +215,6 @@ namespace Jint
 //            Date.Configure();
 //            Date.PrototypeObject.Configure();
 
-            Console.Configure();
             Math.Configure();
             Json.Configure();
 
@@ -285,7 +282,6 @@ namespace Jint
         public BooleanConstructor Boolean { get; }
         public NumberConstructor Number { get; }
         //public DateConstructor Date { get; }
-        public ConsoleInstance Console { get; }
         public MathInstance Math { get; }
         public JsonInstance Json { get; }
         public SymbolConstructor Symbol { get; }
