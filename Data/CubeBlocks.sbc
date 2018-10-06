@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <CubeBlocks>
+
+    <Definition xsi:type="MyObjectBuilder_ProgrammableBlockDefinition">
+      <Id>
+        <TypeId>MyProgrammableBlock</TypeId>
+        <SubtypeId>JSSmallProgrammableBlock</SubtypeId>
+      </Id>
+      <Public>true</Public>
+      <DisplayName>Javascript Programmable Block</DisplayName>
+      <Icon>Textures\GUI\Icons\Cubes\ProgrammingBlock.dds</Icon>
+      <CubeSize>Small</CubeSize>
+      <BlockTopology>TriangleMesh</BlockTopology>
+      <Size x="1" y="1" z="1" />
+      <ModelOffset x="0" y="0" z="0" />
+      <Model>Models\Cubes\Small\ProgrammingBlock.mwm</Model>
+      <Components>
+        <Component Subtype="SteelPlate" Count="1" />
+        <Component Subtype="Construction" Count="2" />
+        <Component Subtype="LargeTube" Count="2" />
+        <Component Subtype="Motor" Count="1" />
+        <Component Subtype="Display" Count="1" />
+        <Component Subtype="Computer" Count="2" />
+        <Component Subtype="SteelPlate" Count="1" />
+      </Components>
+      <CriticalComponent Subtype="Computer" Index="0" />
+      <BuildProgressModels>
+        <Model BuildPercentUpperBound="0.50" File="Models\Cubes\Small\ProgrammingBlockConstruction_1.mwm" />
+        <Model BuildPercentUpperBound="1.00" File="Models\Cubes\Small\ProgrammingBlockConstruction_2.mwm" />
+      </BuildProgressModels>
+      <BlockPairName>JSProgrammableBlock</BlockPairName>
+      <MirroringZ>Y</MirroringZ>
+      <EdgeType>Light</EdgeType>
+      <BuildTimeSeconds>20</BuildTimeSeconds>
+      <MountPoints>
+        <MountPoint Side="Front" ExclusionMask="3" PropertiesMask="3" StartX="0" StartY="0" EndX="1" EndY="1" />
+      </MountPoints>
+      <ResourceSinkGroup>Utility</ResourceSinkGroup>
+      <DamageEffectName>Damage_Electrical_Damaged</DamageEffectName>
+      <DamagedSound>ParticleElectrical</DamagedSound>
+      <EmissiveColorPreset>Default</EmissiveColorPreset>
+      <DestroyEffect>BlockDestroyedExplosion_Tiny</DestroyEffect>
+      <DestroySound>WepSmallWarheadExpl</DestroySound>
+      <PCU>10</PCU>
+    </Definition>
+
+    <Definition xsi:type="MyObjectBuilder_ProgrammableBlockDefinition">
+      <Id>
+        <TypeId>MyProgrammableBlock</TypeId>
+        <SubtypeId>JSLargeProgrammableBlock</SubtypeId>
+      </Id>
+      <Public>true</Public>
+      <DisplayName>Javascript Programmable Block</DisplayName>
+      <Icon>Textures\GUI\Icons\Cubes\ProgrammingBlock.dds</Icon>
+      <CubeSize>Large</CubeSize>
+      <BlockTopology>TriangleMesh</BlockTopology>
+      <Size x="1" y="1" z="1" />
+      <ModelOffset x="0" y="0" z="0" />
+      <Model>Models\Cubes\Large\ProgrammingBlock.mwm</Model>
+      <Components>
+        <Component Subtype="SteelPlate" Count="11" />
+        <Component Subtype="Construction" Count="4" />
+        <Component Subtype="LargeTube" Count="2" />
+        <Component Subtype="Motor" Count="1" />
+        <Component Subtype="Display" Count="1" />
+        <Component Subtype="Computer" Count="2" />
+        <Component Subtype="SteelPlate" Count="10" />
+      </Components>
+      <CriticalComponent Subtype="Computer" Index="0" />
+      <BuildProgressModels>
+        <Model BuildPercentUpperBound="0.33" File="Models\Cubes\Large\ProgrammingBlockConstruction_1.mwm" />
+        <Model BuildPercentUpperBound="0.66" File="Models\Cubes\Large\ProgrammingBlockConstruction_2.mwm" />
+        <Model BuildPercentUpperBound="1.00" File="Models\Cubes\Large\ProgrammingBlockConstruction_3.mwm" />
+      </BuildProgressModels>
+      <BlockPairName>JSProgrammableBlock</BlockPairName>
+      <MirroringY>Z</MirroringY>
+      <MirroringZ>Y</MirroringZ>
+      <EdgeType>Light</EdgeType>
+      <BuildTimeSeconds>20</BuildTimeSeconds>
+      <MountPoints>
+        <MountPoint Side="Bottom" StartX="0.0" StartY="0" EndX="1.0" EndY="1.0" />
+      </MountPoints>
+      <ResourceSinkGroup>Utility</ResourceSinkGroup>
+      <DamageEffectName>Damage_Electrical_Damaged</DamageEffectName>
+      <DamagedSound>ParticleElectrical</DamagedSound>
+      <EmissiveColorPreset>Default</EmissiveColorPreset>
+      <DestroyEffect>BlockDestroyedExplosion_Large</DestroyEffect>
+      <DestroySound>WepSmallWarheadExpl</DestroySound>
+      <PCU>25</PCU>
+    </Definition>
+  </CubeBlocks>
+</Definitions>
