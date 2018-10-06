@@ -8,7 +8,7 @@ Work in progress...
 ## Completed
 * Interpreter working
 * "Javascript Programmable Block" block created/working.  You can edit the code just like the old PB and click a button to Run it.
-* Implement "console.log" (temporarily outputs to chat for testing purposes)
+* Implement "console.log"
 
 ## TODO
 * Refactor the jint expression interpreter to support stepping through the program one call at a time for throttling purposes.
