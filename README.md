@@ -3,6 +3,8 @@ Javascript Programmable Block replacement for Space Engineers.
 
 Work in progress...
 
+[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/Ja02--7lH9U/0.jpg)](http://www.youtube.com/watch?v=Ja02--7lH9U)
+
 ## Completed
 * Interpreter working
 * "Javascript Programmable Block" block created/working.  You can edit the code just like the old PB and click a button to Run it.
