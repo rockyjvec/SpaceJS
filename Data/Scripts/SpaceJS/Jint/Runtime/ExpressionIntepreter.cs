@@ -16,7 +16,6 @@ namespace Jint.Runtime
     public sealed class ExpressionInterpreter
     {
         private readonly Engine _engine;
-        private readonly bool _isDebugMode;
         private readonly int _maxRecursionDepth;
         private readonly IReferenceResolver _referenceResolver;
 
@@ -25,7 +24,6 @@ namespace Jint.Runtime
             _engine = engine;
             
             // gather some options as fields for faster checks
-            _isDebugMode = engine.Options.IsDebugMode;
             _maxRecursionDepth = engine.Options.MaxRecursionDepth;
             _referenceResolver = engine.Options.ReferenceResolver;
         }
@@ -791,11 +789,6 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
         {
             var callee = _engine.EvaluateExpression(callExpression.Callee);
             
-            if (_isDebugMode)
-            {
-                _engine.DebugHandler.AddToDebugCallStack(callExpression);
-            }
-
             // todo: implement as in http://www.ecma-international.org/ecma-262/5.1/#sec-11.2.4
 
             var arguments = ArrayExt.Empty<JsValue>();
@@ -887,11 +880,6 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
             }
 
             var result = callable.Call(thisObject, arguments);
-
-            if (_isDebugMode)
-            {
-                _engine.DebugHandler.PopDebugCallStack();
-            }
 
             if (_maxRecursionDepth >= 0)
             {

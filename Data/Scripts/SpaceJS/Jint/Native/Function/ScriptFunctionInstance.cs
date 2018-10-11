@@ -86,6 +86,8 @@ namespace Jint.Native.Function
         /// <returns></returns>
         public override JsValue Call(JsValue thisArg, JsValue[] arguments)
         {
+            throw new System.Exception("ScriptFunctionInstance Call Not Implemented");
+            /*
             using (new StrictModeScope(Strict, true))
             {
                 // setup new execution context http://www.ecma-international.org/ecma-262/5.1/#sec-10.4.3
@@ -150,7 +152,7 @@ namespace Jint.Native.Function
                 }
 
                 return Undefined;
-            }
+            }*/
         }
 
         /// <summary>

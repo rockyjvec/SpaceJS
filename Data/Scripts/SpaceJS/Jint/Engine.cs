@@ -22,7 +22,6 @@ using Jint.Native.Symbol;
 using Jint.Pooling;
 using Jint.Runtime;
 using Jint.Runtime.CallStack;
-using Jint.Runtime.Debugger;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Environments;
 using Jint.Runtime.Interop;
@@ -31,7 +30,7 @@ using Sandbox.ModAPI;
 
 namespace Jint
 {
-    public sealed class Engine
+    public class Engine
     {
         private static readonly ParserOptions DefaultParserOptions = new ParserOptions
         {
@@ -265,8 +264,6 @@ namespace Jint
             }
 */
 //            ClrTypeConverter = new DefaultTypeConverter(this);
-            BreakPoints = new List<BreakPoint>();
-            DebugHandler = new DebugHandler(this);
         }
 
         public LexicalEnvironment GlobalEnvironment { get; }
@@ -303,25 +300,6 @@ namespace Jint
         public GlobalSymbolRegistry GlobalSymbolRegistry { get; }
 
         internal Options Options { get; }
-
-        #region Debugger
-        public delegate StepMode DebugStepDelegate(object sender, DebugInformation e);
-        public delegate StepMode BreakDelegate(object sender, DebugInformation e);
-        public event DebugStepDelegate Step;
-        public event BreakDelegate Break;
-        internal DebugHandler DebugHandler { get; private set; }
-        public List<BreakPoint> BreakPoints { get; private set; }
-
-        internal StepMode? InvokeStepEvent(DebugInformation info)
-        {
-            return Step?.Invoke(this, info);
-        }
-
-        internal StepMode? InvokeBreakEvent(DebugInformation info)
-        {
-            return Break?.Invoke(this, info);
-        }
-        #endregion
 
         private static readonly Func<long> GetAllocatedBytesForCurrentThread;
 
@@ -438,14 +416,7 @@ namespace Jint
             {
                 DeclarationBindingInstantiation(DeclarationBindingType.GlobalCode, program.HoistingScope.FunctionDeclarations, program.HoistingScope.VariableDeclarations, null, null);
 
-                var result = _statements.ExecuteProgram(program);
-                if (result.Type == CompletionType.Throw)
-                {
-                    var ex = new JavaScriptException(result.GetValueOrDefault()).SetCallstack(this, result.Location);
-                    throw ex;
-                }
-
-                _completionValue = result.GetValueOrDefault();
+                _statements.ExecuteProgram(program);
             }
 
             return this;
@@ -464,87 +435,145 @@ namespace Jint
             return _completionValue;
         }
 
-        public Completion ExecuteStatement(Statement statement)
+        public bool Step()
         {
-            _lastSyntaxNode = statement;
+            return _statements.Step();
+        }
 
-            if (_runBeforeStatementChecks)
+        public void Clear()
+        {
+            _statements.Clear();
+        }
+
+        public void ExecuteStatement(RuntimeState state)
+        {
+            Statement statement = (Statement)state.arg;
+            //_lastSyntaxNode = statement;
+
+/*            if (_runBeforeStatementChecks)
             {
                 BeforeExecuteStatement(statement);
+            }
+            */
+
+
+            if(state.calleeReturned)
+            {
+                switch (statement.Type)
+                {
+                    case Nodes.BlockStatement:
+                    case Nodes.VariableDeclaration:
+                    case Nodes.BreakStatement:
+                    case Nodes.ContinueStatement:
+                    case Nodes.DoWhileStatement:
+                    case Nodes.ForStatement:
+                    case Nodes.ForInStatement:
+                    case Nodes.IfStatement:
+                    case Nodes.LabeledStatement:
+                    case Nodes.SwitchStatement:
+                    case Nodes.ThrowStatement:
+                    case Nodes.TryStatement:
+                    case Nodes.WhileStatement:
+                    case Nodes.WithStatement:
+                    case Nodes.Program:
+                        _statements.Return(state.calleeReturnValue);
+                        return;
+                    default:
+                        ExceptionHelper.ThrowArgumentOutOfRangeException();
+                        _statements.Return(new Completion(CompletionType.Normal, null, null));
+                        return;
+                }
             }
 
             switch (statement.Type)
             {
                 case Nodes.BlockStatement:
-                    return _statements.ExecuteStatementList(((BlockStatement) statement).Body);
+                    _statements.Call(_statements.ExecuteStatementList, ((BlockStatement) statement).Body);
+                    return;
 
                 case Nodes.ReturnStatement:
                     var jsValue = ((ReturnStatement) statement).Argument == null
                         ? Undefined.Instance
                         : GetValue(EvaluateExpression(((ReturnStatement) statement).Argument), true);
 
-                    return new Completion(CompletionType.Return, jsValue, null);
+                    _statements.Return(jsValue);
+                    return;
 
                 case Nodes.VariableDeclaration:
-                    return _statements.ExecuteVariableDeclaration((VariableDeclaration) statement);
+                    _statements.Call(_statements.ExecuteVariableDeclaration, (VariableDeclaration) statement);
+                    return;
 
                 case Nodes.BreakStatement:
-                    return _statements.ExecuteBreakStatement((BreakStatement) statement);
+                    _statements.Call(_statements.ExecuteBreakStatement, (BreakStatement) statement);
+                    return;
 
                 case Nodes.ContinueStatement:
-                    return _statements.ExecuteContinueStatement((ContinueStatement) statement);
+                    _statements.Call(_statements.ExecuteContinueStatement, (ContinueStatement) statement);
+                    return;
 
                 case Nodes.DoWhileStatement:
-                    return _statements.ExecuteDoWhileStatement((DoWhileStatement) statement);
+                    _statements.Call(_statements.ExecuteDoWhileStatement, (DoWhileStatement) statement);
+                    return;
 
                 case Nodes.EmptyStatement:
-                    return new Completion(CompletionType.Normal, null, null);
+                    _statements.Return(new Completion(CompletionType.Normal, null, null));
+                    return;
 
                 case Nodes.ExpressionStatement:
-                    return new Completion(
+                    _statements.Return(new Completion(
                         CompletionType.Normal,
-                        GetValue(EvaluateExpression(((ExpressionStatement) statement).Expression), true),
-                        null);
+                        GetValue(EvaluateExpression(((ExpressionStatement)statement).Expression), true),
+                        null));
+                    return;
 
                 case Nodes.ForStatement:
-                    return _statements.ExecuteForStatement((ForStatement) statement);
+                    _statements.Call(_statements.ExecuteForStatement, (ForStatement) statement);
+                    return;
 
                 case Nodes.ForInStatement:
-                    return _statements.ExecuteForInStatement((ForInStatement) statement);
+                    _statements.Call(_statements.ExecuteForInStatement, (ForInStatement) statement);
+                    return;
 
                 case Nodes.IfStatement:
-                    return _statements.ExecuteIfStatement((IfStatement) statement);
+                    _statements.Call(_statements.ExecuteIfStatement, (IfStatement) statement);
+                    return;
 
                 case Nodes.LabeledStatement:
-                    return _statements.ExecuteLabeledStatement((LabeledStatement) statement);
+                    _statements.Call(_statements.ExecuteLabeledStatement, (LabeledStatement) statement);
+                    return;
 
                 case Nodes.SwitchStatement:
-                    return _statements.ExecuteSwitchStatement((SwitchStatement) statement);
+                    _statements.Call(_statements.ExecuteSwitchStatement, (SwitchStatement) statement);
+                    return;
 
                 case Nodes.FunctionDeclaration:
-                    return new Completion(CompletionType.Normal, null, null);
+                    _statements.Return(new Completion(CompletionType.Normal, null, null));
+                    return;
 
                 case Nodes.ThrowStatement:
-                    return _statements.ExecuteThrowStatement((ThrowStatement) statement);
+                    _statements.Call(_statements.ExecuteThrowStatement, (ThrowStatement) statement);
+                    return;
 
                 case Nodes.TryStatement:
-                    return _statements.ExecuteTryStatement((TryStatement) statement);
+                    _statements.Call(_statements.ExecuteTryStatement, (TryStatement) statement);
+                    return;
 
                 case Nodes.WhileStatement:
-                    return _statements.ExecuteWhileStatement((WhileStatement) statement);
+                    _statements.Call(_statements.ExecuteWhileStatement, (WhileStatement) statement);
+                    return;
 
                 case Nodes.WithStatement:
-                    return _statements.ExecuteWithStatement((WithStatement) statement);
-
-                case Nodes.DebuggerStatement:
-                    return _statements.ExecuteDebuggerStatement((DebuggerStatement) statement);
+                    _statements.Call(_statements.ExecuteWithStatement, (WithStatement) statement);
+                    return;
 
                 case Nodes.Program:
-                    return _statements.ExecuteProgram((Program) statement);
+                    _statements.Call(_statements.ExecuteProgram, (Program) statement);
+                    return;
 
                 default:
                     ExceptionHelper.ThrowArgumentOutOfRangeException();
-                    return new Completion(CompletionType.Normal, null, null);
+                    _statements.Return(new Completion(CompletionType.Normal, null, null));
+                    return;
             }
         }
 
@@ -574,11 +603,6 @@ namespace Jint
                 {
                     ExceptionHelper.ThrowPlatformNotSupportedException("The current platform doesn't support MemoryLimit.");
                 }
-            }
-
-            if (_isDebugMode)
-            {
-                DebugHandler.OnStep(statement);
             }
         }
 

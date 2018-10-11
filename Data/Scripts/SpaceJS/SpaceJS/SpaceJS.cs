@@ -12,13 +12,12 @@ using Sandbox.Game.Localization;
 using VRage.Game.GUI.TextPanel;
 using Sandbox.Game.Entities;
 using System;
-using Jint.Runtime.Debugger;
 using System.Collections.Generic;
 using Sandbox.ModAPI.Interfaces.Terminal;
 using VRage.Utils;
 using System.Text;
-using SpaceJS;
 using VRage.ObjectBuilders;
+using Esprima.Ast;
 
 namespace SpaceJS
 {
@@ -29,12 +28,25 @@ namespace SpaceJS
         private IMyTerminalBlock tb;
         private IMyCubeBlock cb;
         private IMyCubeBlock m_parent;
+
+        private Jint.Engine engine = null;
         
         private string CustomInfo = "";
+
+        private static List<SpaceJS> blocks = new List<SpaceJS>();
         
+        public static void Step()
+        {
+            blocks.ForEach(spacejs =>
+            {
+                spacejs.ExecuteStep();
+            });
+        }
+
         public override void Close() 
         { 
             tb.AppendingCustomInfo -= AppendingCustomInfo;
+            blocks.Remove(this);
         } 
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
@@ -59,6 +71,8 @@ namespace SpaceJS
             tb.AppendingCustomInfo += AppendingCustomInfo;
            
             MyAPIGateway.TerminalControls.CustomControlGetter += GetCustomControls;
+
+            blocks.Add(this);
         }
         
         public void GetCustomControls(IMyTerminalBlock block, List<IMyTerminalControl> controls)
@@ -100,20 +114,29 @@ namespace SpaceJS
             UpdateCustomInfo("");
             try 
             {
-                var engine = Engine.Create(options => options.DebugMode(false), this);
+                engine = null;
 
-                engine.Execute(pb.CustomData);                
+                engine = Engine.Create(options => options.DebugMode(false), this);
+
+                engine.Execute(pb.CustomData);
             }
             catch (Exception e)
             {
-                UpdateCustomInfo(e.ToString());
+                AppendCustomInfo(e.ToString());
             }
 
         }
-        
+
         public void UpdateCustomInfo(string text)
         {
             CustomInfo = text;
+
+            // Prevent CustomInfo from getting too big
+            if (CustomInfo.Length > 1000)
+            {
+                CustomInfo = CustomInfo.Substring(CustomInfo.Length - 1000);
+            }
+
             tb.RefreshCustomInfo();
             var b = tb as IMyProgrammableBlock;
             b.Enabled = !b.Enabled;
@@ -123,6 +146,13 @@ namespace SpaceJS
         public void AppendCustomInfo(string text)
         {
             CustomInfo += text;
+
+            // Prevent CustomInfo from getting too big
+            if (CustomInfo.Length > 1000)
+            {
+                CustomInfo = CustomInfo.Substring(CustomInfo.Length - 1000);
+            }
+
             tb.RefreshCustomInfo();
             var b = tb as IMyProgrammableBlock;
             b.Enabled = !b.Enabled;
@@ -134,10 +164,23 @@ namespace SpaceJS
             str.Clear();
             str.Append(CustomInfo);
         }
-        
-        public override void UpdateAfterSimulation100()
+
+        public void ExecuteStep()
         {
-            // TODO - Step through javascript code rather than running it all at once.  Implement events.
+            try
+            {
+                if(engine != null)
+                {
+                    engine.Step();
+                }
+            }
+            catch (Exception e)
+            {
+                engine.Clear();
+                AppendCustomInfo("Error: " + e.Message + "\n");
+            }
+
+            // TODO - Implement events.
         }
 
         public override MyObjectBuilder_EntityBase GetObjectBuilder(bool copy = false)

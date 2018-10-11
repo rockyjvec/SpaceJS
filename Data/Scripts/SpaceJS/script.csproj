@@ -259,10 +259,6 @@
     <Compile Include="Jint\Runtime\CallStack\CallStackElementComparer.cs" />
     <Compile Include="Jint\Runtime\CallStack\JintCallStack.cs" />
     <Compile Include="Jint\Runtime\Completion.cs" />
-    <Compile Include="Jint\Runtime\Debugger\BreakPoint.cs" />
-    <Compile Include="Jint\Runtime\Debugger\DebugHandler.cs" />
-    <Compile Include="Jint\Runtime\Debugger\DebugInformation.cs" />
-    <Compile Include="Jint\Runtime\Debugger\StepMode.cs" />
     <Compile Include="Jint\Runtime\Descriptors\PropertyDescriptor.cs" />
     <Compile Include="Jint\Runtime\Descriptors\PropertyFlag.cs" />
     <Compile Include="Jint\Runtime\Descriptors\Specialized\ClrAccessDescriptor.cs" />
@@ -304,7 +300,9 @@
     <Compile Include="Jint\Runtime\StructDictionary.cs" />
     <Compile Include="Jint\Runtime\TypeConverter.cs" />
     <Compile Include="Jint\StrictModeScope.cs" />
+    <Compile Include="Jint\Runtime\RuntimeState.cs" />
     <Compile Include="SpaceJS\Engine.cs" />
+    <Compile Include="SpaceJS\Session.cs" />
     <Compile Include="SpaceJS\SpaceJS.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

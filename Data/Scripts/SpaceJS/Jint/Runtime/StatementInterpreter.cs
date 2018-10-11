@@ -4,6 +4,8 @@ using Jint.Native;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Environments;
 using Jint.Runtime.References;
+using System;
+using Sandbox.ModAPI;
 
 namespace Jint.Runtime
 {
@@ -11,272 +13,472 @@ namespace Jint.Runtime
     {
         private readonly Engine _engine;
 
+        Stack<RuntimeState> stack = new Stack<RuntimeState>();
+
         public StatementInterpreter(Engine engine)
         {
             _engine = engine;
         }
 
-        private Completion ExecuteStatement(Statement statement)
+        private void ExecuteStatement(RuntimeState state)
         {
-            return _engine.ExecuteStatement(statement);
+            Statement statement = (Statement)state.arg;
+            if(state.calleeReturned)
+            {
+                Return(state.calleeReturnValue);
+                return;
+            }
+
+            Call(_engine.ExecuteStatement, statement);
         }
 
-        public Completion ExecuteEmptyStatement(EmptyStatement emptyStatement)
+        public void ExecuteEmptyStatement(RuntimeState state)
         {
-            return new Completion(CompletionType.Normal, null, null);
+            EmptyStatement emptyStatement = (EmptyStatement)state.arg;
+            Return(new Completion(CompletionType.Normal, null, null));
+            return;
         }
 
-        public Completion ExecuteExpressionStatement(ExpressionStatement expressionStatement)
+        public void ExecuteExpressionStatement(RuntimeState state)
         {
+            ExpressionStatement expressionStatement = (ExpressionStatement)state.arg;
+            // TODO - possibly will need to add expressions to the state machine.
             var exprRef = _engine.EvaluateExpression(expressionStatement.Expression);
-            return new Completion(CompletionType.Normal, _engine.GetValue(exprRef, true), null);
+            Return(new Completion(CompletionType.Normal, _engine.GetValue(exprRef, true), null));
+            return;
         }
 
-        public Completion ExecuteIfStatement(IfStatement ifStatement)
+        public void ExecuteIfStatement(RuntimeState state)
         {
-            Completion result;
+            IfStatement ifStatement = (IfStatement)state.arg;
+            if(state.calleeReturned)
+            {
+                Return(state.calleeReturnValue);
+                return;
+            }
+
+            // TODO - possibly will need to add expressions to the state machine.
             if (TypeConverter.ToBoolean(_engine.GetValue(_engine.EvaluateExpression(ifStatement.Test), true)))
             {
-                result = _engine.ExecuteStatement(ifStatement.Consequent);
+                Call(_engine.ExecuteStatement, ifStatement.Consequent);
             }
             else if (ifStatement.Alternate != null)
             {
-                result = _engine.ExecuteStatement(ifStatement.Alternate);
+                Call(_engine.ExecuteStatement, ifStatement.Alternate);
             }
             else
             {
-                return new Completion(CompletionType.Normal, null, null);
+                Return(new Completion(CompletionType.Normal, null, null));
             }
 
-            return result;
+            return;
         }
 
-        public Completion ExecuteLabeledStatement(LabeledStatement labeledStatement)
+        public void ExecuteLabeledStatement(RuntimeState state)
         {
+            LabeledStatement labeledStatement = (LabeledStatement)state.arg;
+
             // TODO: Esprima added Statement.Label, maybe not necessary as this line is finding the
             // containing label and could keep a table per program with all the labels
             // labeledStatement.Body.LabelSet = labeledStatement.Label;
-            var result = _engine.ExecuteStatement(labeledStatement.Body);
-            if (result.Type == CompletionType.Break && result.Identifier == labeledStatement.Label.Name)
+            if(state.calleeReturned)
             {
-                var value = result.Value;
-                return new Completion(CompletionType.Normal, value, null);
+                Completion result = (Completion)state.calleeReturnValue;
+                if (result.Type == CompletionType.Break && result.Identifier == labeledStatement.Label.Name)
+                {
+                    var value = result.Value;
+                    Return(new Completion(CompletionType.Normal, value, null));
+                    return;
+                }
+                Return(result);
+                return;
             }
 
-            return result;
+            Call(_engine.ExecuteStatement, labeledStatement.Body);
         }
+
+        public class ExecuteDoWhileStatementLocal
+        {
+            public JsValue v;
+            public bool iterating;
+
+        };
 
         /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-12.6.1
         /// </summary>
         /// <param name="doWhileStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteDoWhileStatement(DoWhileStatement doWhileStatement)
+        public void ExecuteDoWhileStatement(RuntimeState state)
         {
-            JsValue v = Undefined.Instance;
-            bool iterating;
+            DoWhileStatement doWhileStatement = (DoWhileStatement)state.arg;
 
-            do
+            ExecuteDoWhileStatementLocal local;
+
+            if(state.local == null)
             {
-                var stmt = _engine.ExecuteStatement(doWhileStatement.Body);
+                state.local = local = new ExecuteDoWhileStatementLocal();
+                local.v = Undefined.Instance;
+                local.iterating = false;
+            }
+            else
+            {
+                local = (ExecuteDoWhileStatementLocal)state.local;
+            }
+
+            if(state.calleeReturned)
+            {
+                var stmt = (Completion)state.calleeReturnValue;
                 if (!ReferenceEquals(stmt.Value, null))
                 {
-                    v = stmt.Value;
+                    local.v = stmt.Value;
                 }
                 if (stmt.Type != CompletionType.Continue || stmt.Identifier != doWhileStatement?.LabelSet?.Name)
                 {
                     if (stmt.Type == CompletionType.Break && (stmt.Identifier == null || stmt.Identifier == doWhileStatement?.LabelSet?.Name))
                     {
-                        return new Completion(CompletionType.Normal, v, null);
+                        Return(new Completion(CompletionType.Normal, local.v, null));
+                        return;
                     }
 
                     if (stmt.Type != CompletionType.Normal)
                     {
-                        return stmt;
+                        Return(stmt);
+                        return;
                     }
                 }
 
                 var exprRef = _engine.EvaluateExpression(doWhileStatement.Test);
-                iterating = TypeConverter.ToBoolean(_engine.GetValue(exprRef, true));
+                local.iterating = TypeConverter.ToBoolean(_engine.GetValue(exprRef, true));
 
-            } while (iterating);
+                if(!local.iterating)
+                {
 
-            return new Completion(CompletionType.Normal, v, null);
+                    Return(new Completion(CompletionType.Normal, local.v, null));
+                    return;
+                }
+
+            }
+
+            Call(_engine.ExecuteStatement, doWhileStatement.Body);
+            return;
+
         }
+
+        public class ExecuteWhileStatementLocal
+        {
+            public JsValue v;
+        };
 
         /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-12.6.2
         /// </summary>
         /// <param name="whileStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteWhileStatement(WhileStatement whileStatement)
+        public void ExecuteWhileStatement(RuntimeState state)
         {
-            JsValue v = Undefined.Instance;
-            while (true)
+            WhileStatement whileStatement = (WhileStatement)state.arg;
+            ExecuteWhileStatementLocal local;
+            if(state.local == null)
             {
-                var jsValue = _engine.GetValue(_engine.EvaluateExpression(whileStatement.Test), true);
-                if (!TypeConverter.ToBoolean(jsValue))
-                {
-                    return new Completion(CompletionType.Normal, v, null);
-                }
+                state.local = local = new ExecuteWhileStatementLocal();
+                local.v = Undefined.Instance;
+            }
+            else
+            {
+                local = (ExecuteWhileStatementLocal)state.local;
+            }
 
-                var stmt = _engine.ExecuteStatement(whileStatement.Body);
+            if(state.calleeReturned)
+            {
+                var stmt = (Completion)state.calleeReturnValue;
 
                 if (!ReferenceEquals(stmt.Value, null))
                 {
-                    v = stmt.Value;
+                    local.v = stmt.Value;
                 }
 
                 if (stmt.Type != CompletionType.Continue || stmt.Identifier != whileStatement?.LabelSet?.Name)
                 {
                     if (stmt.Type == CompletionType.Break && (stmt.Identifier == null || stmt.Identifier == whileStatement?.LabelSet?.Name))
                     {
-                        return new Completion(CompletionType.Normal, v, null);
+                        Return(new Completion(CompletionType.Normal, local.v, null));
+                        return;
                     }
 
                     if (stmt.Type != CompletionType.Normal)
                     {
-                        return stmt;
+                        Return(stmt);
+                        return;
                     }
                 }
             }
+
+            var jsValue = _engine.GetValue(_engine.EvaluateExpression(whileStatement.Test), true);
+            if (!TypeConverter.ToBoolean(jsValue))
+            {
+                Return(new Completion(CompletionType.Normal, local.v, null));
+            }
+
+            Call( _engine.ExecuteStatement, whileStatement.Body);
+            return;
         }
 
+        public class ExecuteForStatementLocal
+        {
+            public Esprima.Ast.INode init;
+            public JsValue v;
+            public uint stage;
+        };
         /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-12.6.3
         /// </summary>
         /// <param name="forStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteForStatement(ForStatement forStatement)
+        public void ExecuteForStatement(RuntimeState state)
         {
-            var init = forStatement.Init;
-            if (init != null)
+            ForStatement forStatement = (ForStatement)state.arg;
+            ExecuteForStatementLocal local;
+            if (state.local == null)
             {
-                if (init.Type == Nodes.VariableDeclaration)
-                {
-                    var c = _engine.ExecuteStatement((Statement) init);
-
-                }
-                else
-                {
-                    _engine.GetValue(_engine.EvaluateExpression(init), true);
-                }
+                state.local = local = new ExecuteForStatementLocal();
+                local.init = forStatement.Init;
+                local.v = Undefined.Instance;
+                local.stage = 0;
+            }
+            else
+            {
+                local = (ExecuteForStatementLocal)state.local;
             }
 
-            JsValue v = Undefined.Instance;
-            while (true)
+            if(local.stage == 0)
             {
+                if(state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.calleeReturnValue = null;
+                    local.stage = 1;
+                    return;
+                }
+
+                if (local.init != null)
+                {
+                    if (local.init.Type == Nodes.VariableDeclaration)
+                    {
+                        Call(_engine.ExecuteStatement, (Statement)local.init);
+                        return;
+                    }
+                    else
+                    {
+                        _engine.GetValue(_engine.EvaluateExpression(local.init), true);
+                    }
+                }
+                local.stage = 1;
+            }
+
+            if(local.stage == 1)
+            {
+                if (state.calleeReturned)
+                {
+                    Completion stmt = (Completion)state.calleeReturnValue;
+                    state.calleeReturned = false;
+                    state.calleeReturnValue = null;
+
+                    if (!ReferenceEquals(stmt.Value, null))
+                    {
+                        local.v = stmt.Value;
+                    }
+
+                    var stmtType = stmt.Type;
+                    if (stmtType == CompletionType.Break && (stmt.Identifier == null || stmt.Identifier == forStatement?.LabelSet?.Name))
+                    {
+                        Return(new Completion(CompletionType.Normal, local.v, null));
+                        return;
+                    }
+                    if (stmtType != CompletionType.Continue || ((stmt.Identifier != null) && stmt.Identifier != forStatement?.LabelSet?.Name))
+                    {
+                        if (stmtType != CompletionType.Normal)
+                        {
+                            Return(stmt);
+                            return;
+                        }
+                    }
+                    if (forStatement.Update != null)
+                    {
+                        _engine.GetValue(_engine.EvaluateExpression(forStatement.Update), true);
+                    }
+                }
+
                 if (forStatement.Test != null)
                 {
                     var testExprRef = _engine.EvaluateExpression(forStatement.Test);
                     if (!TypeConverter.ToBoolean(_engine.GetValue(testExprRef, true)))
                     {
-                        return new Completion(CompletionType.Normal, v, null);
+                        Return(new Completion(CompletionType.Normal, local.v, null));
+                        return;
                     }
                 }
 
-                var stmt = _engine.ExecuteStatement(forStatement.Body);
-                if (!ReferenceEquals(stmt.Value, null))
-                {
-                    v = stmt.Value;
-                }
-
-                var stmtType = stmt.Type;
-                if (stmtType == CompletionType.Break && (stmt.Identifier == null || stmt.Identifier == forStatement?.LabelSet?.Name))
-                {
-                    return new Completion(CompletionType.Normal, v, null);
-                }
-                if (stmtType != CompletionType.Continue || ((stmt.Identifier != null) && stmt.Identifier != forStatement?.LabelSet?.Name))
-                {
-                    if (stmtType != CompletionType.Normal)
-                    {
-                        return stmt;
-                    }
-                }
-                if (forStatement.Update != null)
-                {
-                    _engine.GetValue(_engine.EvaluateExpression(forStatement.Update), true);
-                }
+                Call(_engine.ExecuteStatement, forStatement.Body);
+                return;
             }
         }
 
+        public class ExecuteForInStatementLocal
+        {
+            public uint stage;
+
+            public Identifier identifier;
+            public Reference varRef;
+            public JsValue experValue;
+            public Native.Object.ObjectInstance obj;
+            public JsValue v;
+            public Native.Object.ObjectInstance cursor;
+            public HashSet<string> processedKeys;
+
+            public uint i;
+            public Jint.Native.Array.ArrayInstance keys;
+            public uint length;
+        };
         /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-12.6.4
         /// </summary>
         /// <param name="forInStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteForInStatement(ForInStatement forInStatement)
+        public void ExecuteForInStatement(RuntimeState state)
         {
-            var identifier = forInStatement.Left.Type == Nodes.VariableDeclaration
-                ? (Identifier) ((VariableDeclaration) forInStatement.Left).Declarations[0].Id
-                : (Identifier) forInStatement.Left;
-
-            var varRef = _engine.EvaluateExpression(identifier) as Reference;
-            var experValue = _engine.GetValue(_engine.EvaluateExpression(forInStatement.Right), true);
-            if (experValue.IsUndefined() || experValue.IsNull())
+            ForInStatement forInStatement = (ForInStatement)state.arg;
+            ExecuteForInStatementLocal local;
+            if(state.local == null)
             {
-                return new Completion(CompletionType.Normal, null, null);
-            }
+                state.local = local = new ExecuteForInStatementLocal();
+                local.stage = 0;
+                local.identifier = forInStatement.Left.Type == Nodes.VariableDeclaration
+                    ? (Identifier)((VariableDeclaration)forInStatement.Left).Declarations[0].Id
+                    : (Identifier)forInStatement.Left;
 
-            var obj = TypeConverter.ToObject(_engine, experValue);
-            JsValue v = Null.Instance;
-
-            // keys are constructed using the prototype chain
-            var cursor = obj;
-            var processedKeys = new HashSet<string>();
-
-            while (!ReferenceEquals(cursor, null))
-            {
-                var keys = _engine.Object.GetOwnPropertyNames(Undefined.Instance, Arguments.From(cursor)).AsArray();
-
-                var length = keys.GetLength();
-                for (var i = 0; i < length; i++)
+                local.varRef = _engine.EvaluateExpression(local.identifier) as Reference;
+                local.experValue = _engine.GetValue(_engine.EvaluateExpression(forInStatement.Right), true);
+                if (local.experValue.IsUndefined() || local.experValue.IsNull())
                 {
-                    var p = keys.GetOwnProperty(TypeConverter.ToString(i)).Value.AsStringWithoutTypeCheck();
-
-                    if (processedKeys.Contains(p))
-                    {
-                        continue;
-                    }
-
-                    processedKeys.Add(p);
-
-                    // collection might be modified by inner statement
-                    if (cursor.GetOwnProperty(p) == PropertyDescriptor.Undefined)
-                    {
-                        continue;
-                    }
-
-                    var value = cursor.GetOwnProperty(p);
-                    if (!value.Enumerable)
-                    {
-                        continue;
-                    }
-
-                    _engine.PutValue(varRef, p);
-
-                    var stmt = _engine.ExecuteStatement(forInStatement.Body);
-                    if (!ReferenceEquals(stmt.Value, null))
-                    {
-                        v = stmt.Value;
-                    }
-                    if (stmt.Type == CompletionType.Break)
-                    {
-                        return new Completion(CompletionType.Normal, v, null);
-                    }
-                    if (stmt.Type != CompletionType.Continue)
-                    {
-                        if (stmt.Type != CompletionType.Normal)
-                        {
-                            return stmt;
-                        }
-                    }
+                    Return(new Completion(CompletionType.Normal, null, null));
+                    return;
                 }
 
-                cursor = cursor.Prototype;
+                local.obj = TypeConverter.ToObject(_engine, local.experValue);
+                JsValue v = Null.Instance;
+
+                // keys are constructed using the prototype chain
+                local.cursor = local.obj;
+                local.processedKeys = new HashSet<string>();
+            }
+            else
+            {
+                local = (ExecuteForInStatementLocal)state.local;
             }
 
-            return new Completion(CompletionType.Normal, v, null);
+            if(state.calleeReturned)
+            {
+                Completion stmt = (Completion)state.calleeReturnValue;
+
+                if (!ReferenceEquals(stmt.Value, null))
+                {
+                    local.v = stmt.Value;
+                }
+                if (stmt.Type == CompletionType.Break)
+                {
+                    Return(new Completion(CompletionType.Normal, local.v, null));
+                    return;
+                }
+                if (stmt.Type != CompletionType.Continue)
+                {
+                    if (stmt.Type != CompletionType.Normal)
+                    {
+                        Return(stmt);
+                        return;
+                    }
+                }
+            }
+
+            if(local.stage == 0)
+            {
+                if (!ReferenceEquals(local.cursor, null))
+                {
+                    Return(new Completion(CompletionType.Normal, local.v, null));
+                    return;
+                }
+
+                local.stage = 1;
+                return;
+            }
+            if (local.stage == 1) // While loop
+            {
+                local.keys = _engine.Object.GetOwnPropertyNames(Undefined.Instance, Arguments.From(local.cursor)).AsArray();
+
+                local.length = local.keys.GetLength();
+                local.i = 0;
+                local.stage = 2;
+                return;
+            }
+            if(local.stage == 2) // For loop
+            {
+                if (local.i < local.length)
+                {
+                    local.stage = 3;
+                }
+                else
+                {
+                    local.stage = 4;
+                }
+
+            }
+            if (local.stage == 3) // For contents
+            {
+                if(state.calleeReturned)
+                {              
+                    local.i++;
+                    local.stage = 2;
+                    return;
+                }
+
+                var p = local.keys.GetOwnProperty(TypeConverter.ToString(local.i)).Value.AsStringWithoutTypeCheck();
+
+                if (local.processedKeys.Contains(p))
+                {
+                    local.i++;
+                    local.stage = 2;
+                    return;
+                }
+
+                local.processedKeys.Add(p);
+
+                // collection might be modified by inner statement
+                if (local.cursor.GetOwnProperty(p) == PropertyDescriptor.Undefined)
+                {
+                    local.i++;
+                    local.stage = 2;
+                    return;
+                }
+
+                var value = local.cursor.GetOwnProperty(p);
+                if (!value.Enumerable)
+                {
+                    local.i++;
+                    local.stage = 2;
+                    return;
+                }
+
+                _engine.PutValue(local.varRef, p);
+                local.i++;
+                local.stage = 2;
+                return;
+            }
+            if (local.stage == 4) // after for loop
+            {
+                local.cursor = local.cursor.Prototype;
+                local.stage = 0;
+                return;
+            }
         }
 
         /// <summary>
@@ -284,12 +486,15 @@ namespace Jint.Runtime
         /// </summary>
         /// <param name="continueStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteContinueStatement(ContinueStatement continueStatement)
+        public void ExecuteContinueStatement(RuntimeState state)
         {
-            return new Completion(
+            ContinueStatement continueStatement = (ContinueStatement)state.arg;
+
+            Return(new Completion(
                 CompletionType.Continue,
                 null,
-                continueStatement.Label?.Name);
+                continueStatement.Label?.Name));
+            return;
         }
 
         /// <summary>
@@ -297,12 +502,15 @@ namespace Jint.Runtime
         /// </summary>
         /// <param name="breakStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteBreakStatement(BreakStatement breakStatement)
+        public void ExecuteBreakStatement(RuntimeState state)
         {
-            return new Completion(
+            BreakStatement breakStatement = (BreakStatement)state.arg;
+
+            Return(new Completion(
                 CompletionType.Break,
                 null,
-                breakStatement.Label?.Name);
+                breakStatement.Label?.Name));
+            return;
         }
 
         /// <summary>
@@ -310,161 +518,277 @@ namespace Jint.Runtime
         /// </summary>
         /// <param name="statement"></param>
         /// <returns></returns>
-        public Completion ExecuteReturnStatement(ReturnStatement statement)
+        public void ExecuteReturnStatement(RuntimeState state)
         {
+            ReturnStatement statement = (ReturnStatement)state.arg;
             if (statement.Argument == null)
             {
-                return new Completion(CompletionType.Return, Undefined.Instance, null);
+                Return(new Completion(CompletionType.Return, Undefined.Instance, null));
+                return;
             }
 
             var jsValue = _engine.GetValue(_engine.EvaluateExpression(statement.Argument), true);
-            return new Completion(CompletionType.Return, jsValue, null);
+            Return(new Completion(CompletionType.Return, jsValue, null));
+            return;
         }
 
+        public class ExecuteWithStatementLocal
+        {
+            public LexicalEnvironment oldEnv;
+        };
         /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-12.10
         /// </summary>
         /// <param name="withStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteWithStatement(WithStatement withStatement)
+        public void ExecuteWithStatement(RuntimeState state)
         {
-            var jsValue = _engine.GetValue(_engine.EvaluateExpression(withStatement.Object), true);
-            var obj = TypeConverter.ToObject(_engine, jsValue);
-            var oldEnv = _engine.ExecutionContext.LexicalEnvironment;
-            var newEnv = LexicalEnvironment.NewObjectEnvironment(_engine, obj, oldEnv, true);
-            _engine.UpdateLexicalEnvironment(newEnv);
-
-            Completion c;
-            try
+            WithStatement withStatement = (WithStatement)state.arg;
+            ExecuteWithStatementLocal local;
+            if (state.local == null)
             {
-                c = _engine.ExecuteStatement(withStatement.Body);
+                state.local = local = new ExecuteWithStatementLocal();
+                var jsValue = _engine.GetValue(_engine.EvaluateExpression(withStatement.Object), true);
+                var obj = TypeConverter.ToObject(_engine, jsValue);
+                local.oldEnv = _engine.ExecutionContext.LexicalEnvironment;
+                var newEnv = LexicalEnvironment.NewObjectEnvironment(_engine, obj, local.oldEnv, true);
+                _engine.UpdateLexicalEnvironment(newEnv);
             }
-            catch (JavaScriptException e)
+            else
             {
-                c = new Completion(CompletionType.Throw, e.Error, null, withStatement.Location);
-            }
-            finally
-            {
-                _engine.UpdateLexicalEnvironment(oldEnv);
+                local = (ExecuteWithStatementLocal)state.local;
             }
 
-            return c;
+            if(state.calleeReturned)
+            {
+                _engine.UpdateLexicalEnvironment(local.oldEnv);
+                Return(state.calleeReturnValue);
+                return;
+            }
         }
 
+        public class ExecuteSwitchBlockArgs
+        {
+            public List<SwitchCase> switchBlock;
+            public JsValue input;
+        };
         /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-12.11
         /// </summary>
         /// <param name="switchStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteSwitchStatement(SwitchStatement switchStatement)
+        public void ExecuteSwitchStatement(RuntimeState state)
         {
-            var jsValue = _engine.GetValue(_engine.EvaluateExpression(switchStatement.Discriminant), true);
-            var r = ExecuteSwitchBlock(switchStatement.Cases, jsValue);
-            if (r.Type == CompletionType.Break && r.Identifier == switchStatement.LabelSet?.Name)
+            SwitchStatement switchStatement = (SwitchStatement)state.arg;
+            if(state.calleeReturned)
             {
-                return new Completion(CompletionType.Normal, r.Value, null);
+                Completion r = (Completion)state.calleeReturnValue;
+
+                if (r.Type == CompletionType.Break && r.Identifier == switchStatement.LabelSet?.Name)
+                {
+                    Return(new Completion(CompletionType.Normal, r.Value, null));
+                    return;
+                }
+                Return(r);
+                return;
             }
-            return r;
+
+            var jsValue = _engine.GetValue(_engine.EvaluateExpression(switchStatement.Discriminant), true);
+            ExecuteSwitchBlockArgs args = new ExecuteSwitchBlockArgs();
+            args.switchBlock = switchStatement.Cases;
+            args.input = jsValue;
+            Call(ExecuteSwitchBlock, args);
+            return;
         }
 
-        public Completion ExecuteSwitchBlock(List<SwitchCase> switchBlock, JsValue input)
+        public class ExecuteSwitchBlockLocal
         {
-            JsValue v = Undefined.Instance;
-            SwitchCase defaultCase = null;
-            bool hit = false;
+            public SwitchCase defaultCase;
+            public JsValue v;
+            public bool hit;
+            public uint stage;
+            public int switchBlockCount;
+            public int i;
+        };
+        public void ExecuteSwitchBlock(RuntimeState state)
+        {
+            ExecuteSwitchBlockArgs args = (ExecuteSwitchBlockArgs)state.arg;
+            List<SwitchCase> switchBlock = args.switchBlock;
+            JsValue input = args.input;
 
-            var switchBlockCount = switchBlock.Count;
-            for (var i = 0; i < switchBlockCount; i++)
+            ExecuteSwitchBlockLocal local;
+            if (state.local == null)
             {
-                var clause = switchBlock[i];
+                state.local = local = new ExecuteSwitchBlockLocal();
+                local.v = Undefined.Instance;
+                local.defaultCase = null;
+                local.hit = false;
+                local.switchBlockCount = switchBlock.Count;
+                local.i = 0;
+                local.stage = 0;
+            }
+            else
+            {
+                local = (ExecuteSwitchBlockLocal)state.local;
+            }
+
+
+            if(local.stage == 0) // for loop
+            {
+                if(local.i < local.switchBlockCount)
+                {
+                    local.stage = 1;
+                }
+                else
+                {
+                    local.stage = 2;
+                }
+            }
+            if(local.stage == 1) // inside for loop
+            {
+                if(state.calleeReturned)
+                {
+                    Completion r = (Completion)state.calleeReturnValue;
+                    if (r.Type != CompletionType.Normal)
+                    {
+                        Return(r);
+                        return;
+                    }
+
+                    local.v = r.Value ?? Undefined.Instance;
+                }
+
+                var clause = switchBlock[local.i];
                 if (clause.Test == null)
                 {
-                    defaultCase = clause;
+                    local.defaultCase = clause;
                 }
                 else
                 {
                     var clauseSelector = _engine.GetValue(_engine.EvaluateExpression(clause.Test), true);
                     if (ExpressionInterpreter.StrictlyEqual(clauseSelector, input))
                     {
-                        hit = true;
+                        local.hit = true;
                     }
                 }
 
-                if (hit && clause.Consequent != null)
+                if (local.hit && clause.Consequent != null)
                 {
-                    var r = ExecuteStatementList(clause.Consequent);
+                    Call(ExecuteStatementList, clause.Consequent);
+                    return;
+                }
+
+                local.i++;
+                local.stage = 0;
+                return;
+            }
+
+            if (local.stage == 2)
+            {
+                if (state.calleeReturned)
+                {
+                    Completion r = (Completion)state.calleeReturnValue;
                     if (r.Type != CompletionType.Normal)
                     {
-                        return r;
+                        Return(r);
+                        return;
                     }
 
-                    v = r.Value ?? Undefined.Instance;
+                    local.v = r.Value ?? Undefined.Instance;
+                }
+
+                // do we need to execute the default case ?
+                if (local.hit == false && local.defaultCase != null)
+                {
+                    Call(ExecuteStatementList, local.defaultCase.Consequent);
+                    return;
+                }
+
+                Return(new Completion(CompletionType.Normal, local.v, null));
+                return;
+            }
+        }
+
+        public class ExecuteMultipleStatementsLocal
+        {
+            public Completion sl;
+            public Completion c;
+            public int statementListCount;
+
+            public int i;
+            public uint stage;
+        };
+
+        private void ExecuteMultipleStatements(RuntimeState state)
+        {
+            List<StatementListItem> statementList = (List < StatementListItem >)state.arg;
+            ExecuteMultipleStatementsLocal local;
+            if (state.local == null)
+            {
+                state.local = local = new ExecuteMultipleStatementsLocal();
+                local.c = new Completion(CompletionType.Normal, null, null);
+                local.sl = local.c;
+                local.statementListCount = statementList.Count;
+                local.stage = 0;
+                local.i = 0;
+            }
+            else
+            {
+                local = (ExecuteMultipleStatementsLocal)state.local;
+            }
+
+            if(local.stage == 0) // for loop
+            {
+                if (local.i < local.statementListCount)
+                {
+                    local.stage = 1;
+                }
+                else
+                {
+                    local.stage = 2;
                 }
             }
 
-            // do we need to execute the default case ?
-            if (hit == false && defaultCase != null)
+            if(local.stage == 1) // inside for loop
             {
-                var r = ExecuteStatementList(defaultCase.Consequent);
-                if (r.Type != CompletionType.Normal)
+                if (state.calleeReturned)
                 {
-                    return r;
-                }
+                    local.c = (Completion)state.calleeReturnValue;
 
-                v = r.Value ?? Undefined.Instance;
-            }
-
-            return new Completion(CompletionType.Normal, v, null);
-        }
-
-        public Completion ExecuteStatementList(List<StatementListItem> statementList)
-        {
-            // optimize common case without loop
-            return statementList.Count == 1 
-                ? ExecuteSingleStatement((Statement) statementList[0]) 
-                : ExecuteMultipleStatements(statementList);
-        }
-
-        private Completion ExecuteMultipleStatements(List<StatementListItem> statementList)
-        {
-            Statement s = null;
-            var c = new Completion(CompletionType.Normal, null, null);
-            Completion sl = c;
-            try
-            {
-                var statementListCount = statementList.Count;
-                for (var i = 0; i < statementListCount; i++)
-                {
-                    s = (Statement) statementList[i];
-                    c = _engine.ExecuteStatement(s);
-                    if (c.Type != CompletionType.Normal)
+                    if (local.c.Type != CompletionType.Normal)
                     {
                         var executeStatementList = new Completion(
-                            c.Type,
-                            c.Value ?? sl.Value,
-                            c.Identifier,
-                            c.Location);
+                            local.c.Type,
+                            local.c.Value ?? local.sl.Value,
+                            local.c.Identifier,
+                            local.c.Location);
 
-                        return executeStatementList;
+                        Return(executeStatementList);
+                        return;
                     }
 
-                    sl = c;
+                    local.sl = local.c;
+                    state.calleeReturned = false;
+                    local.i++;
+                    local.stage = 0;
+                    return;
                 }
-            }
-            catch (JavaScriptException v)
-            {
-                var completion = new Completion(CompletionType.Throw, v.Error, null, v.Location ?? s?.Location);
-                return completion;
+                Call(_engine.ExecuteStatement,(Statement)statementList[local.i]);
+                return;
             }
 
-            return new Completion(c.Type, c.GetValueOrDefault(), c.Identifier);
+            if(local.stage == 2) // after for loop
+            {
+                Return(new Completion(local.c.Type, local.c.GetValueOrDefault(), local.c.Identifier));
+                return;
+            }
         }
 
-        private Completion ExecuteSingleStatement(Statement s)
+        private void ExecuteSingleStatement(RuntimeState state)
         {
-            try
+            if (state.calleeReturned)
             {
-                var c = _engine.ExecuteStatement(s);
+                var c = (Completion)state.calleeReturnValue;
                 if (c.Type != CompletionType.Normal)
                 {
                     var completion = new Completion(
@@ -472,16 +796,16 @@ namespace Jint.Runtime
                         c.Value,
                         c.Identifier,
                         c.Location);
-
-                    return completion;
+                    Return(completion);
                 }
-
-                return new Completion(c.Type, c.GetValueOrDefault(), c.Identifier);
+                else
+                {
+                    Return(new Completion(c.Type, c.GetValueOrDefault(), c.Identifier));
+                }
+                return;
             }
-            catch (JavaScriptException v)
-            {
-                return new Completion(CompletionType.Throw, v.Error, null, v.Location ?? s?.Location);
-            }
+            Statement s = (Statement)state.arg;
+            this.Call(_engine.ExecuteStatement, s);
         }
 
         /// <summary>
@@ -489,58 +813,188 @@ namespace Jint.Runtime
         /// </summary>
         /// <param name="throwStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteThrowStatement(ThrowStatement throwStatement)
+        public void ExecuteThrowStatement(RuntimeState state)
         {
+            ThrowStatement throwStatement = (ThrowStatement)state.arg;
             var jsValue = _engine.GetValue(_engine.EvaluateExpression(throwStatement.Argument), true);
-            return new Completion(CompletionType.Throw, jsValue, null, throwStatement.Location);
+            Return(new Completion(CompletionType.Throw, jsValue, null, throwStatement.Location));
+            return;
         }
+
+        public class ExecuteTryStatementLocal
+        {
+            public uint stage;
+            public LexicalEnvironment oldEnv;
+            public Completion b;
+        };
 
         /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-12.14
         /// </summary>
         /// <param name="tryStatement"></param>
         /// <returns></returns>
-        public Completion ExecuteTryStatement(TryStatement tryStatement)
+        public void ExecuteTryStatement(RuntimeState state)
         {
-            var b = _engine.ExecuteStatement(tryStatement.Block);
-            if (b.Type == CompletionType.Throw)
+            TryStatement tryStatement = (TryStatement)state.arg;
+            ExecuteTryStatementLocal local;
+            if (state.local == null)
             {
-                // execute catch
+                state.local = local = new ExecuteTryStatementLocal();
+                local.stage = 0;
+            }
+            else
+            {
+                local = (ExecuteTryStatementLocal)state.local;
+            }
+
+            if(local.stage == 0)
+            {
+                if(state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    local.stage = 1;
+                    local.b = (Completion)state.calleeReturnValue;
+                    return;
+                }
+
+                Call(_engine.ExecuteStatement, tryStatement.Block);
+                return;
+            }
+
+            if (local.stage == 1)
+            {
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    local.stage = 2;
+                    local.b = (Completion)state.calleeReturnValue;
+                    return;
+                }
+
                 var catchClause = tryStatement.Handler;
                 if (catchClause != null)
                 {
-                    var c = b.Value;
-                    var oldEnv = _engine.ExecutionContext.LexicalEnvironment;
-                    var catchEnv = LexicalEnvironment.NewDeclarativeEnvironment(_engine, oldEnv);
-                    catchEnv._record.CreateMutableBinding(((Identifier) catchClause.Param).Name, c);
+                    var c = local.b.Value;
+                    local.oldEnv = _engine.ExecutionContext.LexicalEnvironment;
+                    var catchEnv = LexicalEnvironment.NewDeclarativeEnvironment(_engine, local.oldEnv);
+                    catchEnv._record.CreateMutableBinding(((Identifier)catchClause.Param).Name, c);
 
                     _engine.UpdateLexicalEnvironment(catchEnv);
-                    b = _engine.ExecuteStatement(catchClause.Body);
-                    _engine.UpdateLexicalEnvironment(oldEnv);
+                    Call(_engine.ExecuteStatement, catchClause.Body);
+                    return;
                 }
+                local.stage = 2;
             }
 
-            if (tryStatement.Finalizer != null)
+            if (local.stage == 2)
             {
-                var f = _engine.ExecuteStatement(tryStatement.Finalizer);
-                if (f.Type == CompletionType.Normal)
+                if (state.calleeReturned)
                 {
-                    return b;
+                    var f = (Completion)state.calleeReturnValue;
+                    if (f.Type == CompletionType.Normal)
+                    {
+                        Return(local.b);
+                        return;
+                    }
+
+                    Return(f);
+                    return;
                 }
 
-                return f;
+                if (tryStatement.Finalizer != null)
+                {
+                    Call(_engine.ExecuteStatement,tryStatement.Finalizer);
+                    return;
+                }
+
+                Return(local.b);
+                return;
+            }
+        }
+
+        public void ExecuteProgram(Program program)
+        {
+            this.Call(ExecuteStatementList, program.Body);
+        }
+
+        public void ExecuteProgram(RuntimeState state)
+        {
+            Program program = (Program)state.arg;
+            if(state.calleeReturned)
+            {
+                Return(state.calleeReturnValue);
+                return;
             }
 
-            return b;
+            this.Call(ExecuteStatementList, program.Body);
         }
 
-        public Completion ExecuteProgram(Program program)
+        public void ExecuteStatementList(RuntimeState state)
         {
-            return ExecuteStatementList(program.Body);
+            if(state.calleeReturned)
+            {
+                Return(state.calleeReturnValue);
+                return;
+            }
+            var statementList = (List<StatementListItem>) state.arg;
+
+            // optimize common case without loop
+            if (statementList.Count == 1)
+            {
+                this.Call(ExecuteSingleStatement, (Statement)statementList[0]);
+            }
+            else
+            {
+                this.Call(ExecuteMultipleStatements, statementList);
+            }
         }
 
-        public Completion ExecuteVariableDeclaration(VariableDeclaration statement)
+        public void Return(object o)
         {
+            this.stack.Pop();
+
+            if(this.stack.Count > 0)
+            {
+                this.stack.Peek().calleeReturnValue = o;
+                this.stack.Peek().calleeReturned = true;
+            }
+        }
+
+        public void Call(Action<RuntimeState> method, object arg)
+        {
+            this.stack.Push(new RuntimeState(method, arg));
+        }
+
+        public bool Step()
+        {
+            if(stack.Count == 0)
+            {
+                return false;
+            }
+
+            RuntimeState current = stack.Peek();
+            try
+            {
+                current.Call();
+            }
+            catch (JavaScriptException v)
+            {
+                var s = (Statement)current.arg;
+
+                Return(new Completion(CompletionType.Throw, v.Error, null, v.Location ?? s?.Location));
+            }
+
+            return true;
+        }
+
+        public void Clear()
+        {
+            stack.Clear();
+        }
+
+        public void ExecuteVariableDeclaration(RuntimeState state)
+        {
+            VariableDeclaration statement = (VariableDeclaration) state.arg;
             var declarationsCount = statement.Declarations.Count;
             for (var i = 0; i < declarationsCount; i++)
             {
@@ -556,29 +1010,22 @@ namespace Jint.Runtime
                 }
             }
 
-            return new Completion(CompletionType.Normal, Undefined.Instance, null);
+            Return(new Completion(CompletionType.Normal, Undefined.Instance, null));
+            return;
         }
 
-        public Completion ExecuteBlockStatement(BlockStatement blockStatement)
+        public void ExecuteBlockStatement(RuntimeState state)
         {
-            return ExecuteStatementList(blockStatement.Body);
-        }
-
-        public Completion ExecuteDebuggerStatement(DebuggerStatement debuggerStatement)
-        {
-            // TODO
-/*
-            if (_engine.Options._IsDebuggerStatementAllowed)
+            BlockStatement blockStatement = (BlockStatement)state.arg;
+            if(state.calleeReturned)
             {
-                if (!System.Diagnostics.Debugger.IsAttached)
-                {
-                    System.Diagnostics.Debugger.Launch();
-                }
-
-                System.Diagnostics.Debugger.Break();
+                Return(state.calleeReturnValue);
+                return;
             }
-*/
-            return new Completion(CompletionType.Normal, null, null);
+
+            Call(ExecuteStatementList, blockStatement.Body);
+            return;
         }
+
     }
 }

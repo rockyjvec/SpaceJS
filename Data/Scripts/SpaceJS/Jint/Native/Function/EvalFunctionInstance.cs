@@ -24,6 +24,8 @@ namespace Jint.Native.Function
 
         public JsValue Call(JsValue thisObject, JsValue[] arguments, bool directCall)
         {
+            throw new System.Exception("EvalFunctionInstance Call Not Implemented");
+            /*
             var arg = arguments.At(0);
             if (arg.Type != Types.String)
             {
@@ -109,7 +111,7 @@ namespace Jint.Native.Function
 
                 ExceptionHelper.ThrowSyntaxError(_engine);
                 return null;
-            }
+            }*/
         }
     }
 }
