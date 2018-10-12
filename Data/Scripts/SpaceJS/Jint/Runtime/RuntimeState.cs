@@ -12,8 +12,10 @@ namespace Jint.Runtime
         public Action<RuntimeState> method;
         public object arg;
         public object local = null;
+        public object local2 = null;
         public object calleeReturnValue;
         public bool calleeReturned = false;
+        public uint stage = 0;
 
         public RuntimeState(Action<RuntimeState> method, object arg)
         {

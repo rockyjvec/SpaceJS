@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using Esprima;
 using Esprima.Ast;
 using Jint.Native;
+using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Number;
+using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Environments;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
+using Runtime;
 
 namespace Jint.Runtime
 {
@@ -22,36 +25,109 @@ namespace Jint.Runtime
         public ExpressionInterpreter(Engine engine)
         {
             _engine = engine;
-            
+
             // gather some options as fields for faster checks
             _maxRecursionDepth = engine.Options.MaxRecursionDepth;
             _referenceResolver = engine.Options.ReferenceResolver;
         }
 
-        private object EvaluateExpression(Expression expression)
+        private void EvaluateExpression(RuntimeState state)
         {
-            return _engine.EvaluateExpression(expression);
+            if(state.calleeReturned)
+            {
+                Return(state.calleeReturnValue);
+                return;
+            }
+            Call(_engine.EvaluateExpression, state);
+            return;
         }
 
-        public JsValue EvaluateConditionalExpression(ConditionalExpression conditionalExpression)
+        public void Call(Action<RuntimeState> method, object arg)
         {
-            var lref = _engine.EvaluateExpression(conditionalExpression.Test);
-            if (TypeConverter.ToBoolean(_engine.GetValue(lref, true)))
+            _engine.Call(method, arg);
+        }
+
+        public void Return(object o)
+        {
+            _engine.Return(o);
+        }
+
+        public void EvaluateConditionalExpression(RuntimeState state)
+        {
+            ConditionalExpression conditionalExpression = (ConditionalExpression)state.arg;
+
+            if (state.stage == 0)
             {
-                var trueRef = _engine.EvaluateExpression(conditionalExpression.Consequent);
-                return _engine.GetValue(trueRef, true);
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    object lref = state.calleeReturnValue;
+                    state.stage = 1;
+
+                    if (TypeConverter.ToBoolean(_engine.GetValue(lref, true)))
+                    {
+                        Call(_engine.EvaluateExpression, conditionalExpression.Consequent);
+                        return;
+                    }
+                    else
+                    {
+                        Call(_engine.EvaluateExpression, conditionalExpression.Alternate);
+                        return;
+                    }
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, conditionalExpression.Test);
+                    return;
+                }
+
             }
             else
             {
-                var falseRef = _engine.EvaluateExpression(conditionalExpression.Alternate);
-                return _engine.GetValue(falseRef, true);
+                if (state.calleeReturned)
+                {
+                    Return((JsValue)_engine.GetValue(state.calleeReturnValue));
+                    return;
+                }
             }
         }
 
-        public JsValue EvaluateAssignmentExpression(AssignmentExpression assignmentExpression)
+        public void EvaluateAssignmentExpression(RuntimeState state)
         {
-            var lref = _engine.EvaluateExpression((Expression) assignmentExpression.Left) as Reference;
-            JsValue rval = _engine.GetValue(_engine.EvaluateExpression(assignmentExpression.Right), true);
+            AssignmentExpression assignmentExpression = (AssignmentExpression)state.arg;
+
+            if (state.stage == 0)
+            {
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.local = state.calleeReturnValue; // state.local = lref
+                    state.stage = 1;
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, (Expression)assignmentExpression.Left);
+                    return;
+                }
+            }
+            if (state.stage == 1)
+            {
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.stage = 2;
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, assignmentExpression.Right);
+                    return;
+                }
+            }
+
+            // Stage 2
+
+            var lref = state.local as Reference;
+            JsValue rval = _engine.GetValue(state.calleeReturnValue, true);
 
             if (lref == null)
             {
@@ -64,7 +140,8 @@ namespace Jint.Runtime
 
                 _engine.PutValue(lref, rval);
                 _engine._referencePool.Return(lref);
-                return rval;
+                Return((JsValue)rval);
+                return;
             }
 
             JsValue lval = _engine.GetValue(lref, false);
@@ -149,13 +226,15 @@ namespace Jint.Runtime
 
                 default:
                     ExceptionHelper.ThrowNotImplementedException();
-                    return null;
+                    Return(null);
+                    return;
             }
 
             _engine.PutValue(lref, lval);
 
             _engine._referencePool.Return(lref);
-            return lval;
+            Return((JsValue)lval);
+            return;
         }
 
         private JsValue Divide(JsValue lval, JsValue rval)
@@ -204,32 +283,65 @@ namespace Jint.Runtime
                     return lN > 0 ? double.PositiveInfinity : double.NegativeInfinity;
                 }
 
-                return lN/rN;
+                return lN / rN;
             }
         }
 
-        public JsValue EvaluateBinaryExpression(BinaryExpression expression)
+        public void EvaluateBinaryExpression(RuntimeState state)
         {
-            JsValue left;
-            if (expression.Left.Type == Nodes.Literal)
+            BinaryExpression expression = (BinaryExpression)state.arg;
+
+            if (state.stage == 0)
             {
-                left = EvaluateLiteral((Literal) expression.Left);
-            }
-            else
-            {
-                left = _engine.GetValue(_engine.EvaluateExpression(expression.Left), true);
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.local = _engine.GetValue(state.calleeReturnValue, true); // left
+                    state.stage = 1;
+                }
+                else
+                {
+                    if (expression.Left.Type == Nodes.Literal)
+                    {
+                        state.local = EvaluateLiteral((Literal)expression.Left);
+                        state.stage = 1;
+                    }
+                    else
+                    {
+                        Call(_engine.EvaluateExpression, expression.Left);
+                        return;
+                    }
+
+                }
             }
 
-            JsValue right;
-            if (expression.Right.Type == Nodes.Literal)
+            if (state.stage == 1)
             {
-                right = EvaluateLiteral((Literal) expression.Right);
-            }
-            else
-            {
-                right = _engine.GetValue(_engine.EvaluateExpression(expression.Right), true);
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.calleeReturnValue = _engine.GetValue(state.calleeReturnValue, true); // right
+                    state.stage = 2;
+                }
+                else
+                {
+                    if (expression.Right.Type == Nodes.Literal)
+                    {
+                        state.calleeReturnValue = EvaluateLiteral((Literal)expression.Right);
+                        state.stage = 2;
+                    }
+                    else
+                    {
+                        Call(_engine.EvaluateExpression, expression.Right);
+                        return;
+                    }
+
+                }
+
             }
 
+            JsValue left = (JsValue)state.local;
+            JsValue right = (JsValue)state.calleeReturnValue;
             JsValue value;
 
             switch (expression.Operator)
@@ -295,7 +407,7 @@ namespace Jint.Runtime
 
                 case BinaryOperator.GreaterOrEqual:
                     value = Compare(left, right);
-                    if (value.IsUndefined() || ((JsBoolean) value)._value)
+                    if (value.IsUndefined() || ((JsBoolean)value)._value)
                     {
                         value = false;
                     }
@@ -315,7 +427,7 @@ namespace Jint.Runtime
 
                 case BinaryOperator.LessOrEqual:
                     value = Compare(right, left, false);
-                    if (value.IsUndefined() || ((JsBoolean) value)._value)
+                    if (value.IsUndefined() || ((JsBoolean)value)._value)
                     {
                         value = false;
                     }
@@ -326,28 +438,36 @@ namespace Jint.Runtime
                     break;
 
                 case BinaryOperator.StrictlyEqual:
-                    return StrictlyEqual(left, right) ? JsBoolean.True : JsBoolean.False;
+                    Return((JsValue)(StrictlyEqual(left, right) ? JsBoolean.True : JsBoolean.False));
+                    return;
 
                 case BinaryOperator.StricltyNotEqual:
-                    return StrictlyEqual(left, right)? JsBoolean.False : JsBoolean.True;
+                    Return((JsValue)(StrictlyEqual(left, right) ? JsBoolean.False : JsBoolean.True));
+                    return;
 
                 case BinaryOperator.BitwiseAnd:
-                    return TypeConverter.ToInt32(left) & TypeConverter.ToInt32(right);
+                    Return((JsValue)(TypeConverter.ToInt32(left) & TypeConverter.ToInt32(right)));
+                    return;
 
                 case BinaryOperator.BitwiseOr:
-                    return TypeConverter.ToInt32(left) | TypeConverter.ToInt32(right);
+                    Return((JsValue)(TypeConverter.ToInt32(left) | TypeConverter.ToInt32(right)));
+                    return;
 
                 case BinaryOperator.BitwiseXOr:
-                    return TypeConverter.ToInt32(left) ^ TypeConverter.ToInt32(right);
+                    Return((JsValue)(TypeConverter.ToInt32(left) ^ TypeConverter.ToInt32(right)));
+                    return;
 
                 case BinaryOperator.LeftShift:
-                    return TypeConverter.ToInt32(left) << (int)(TypeConverter.ToUint32(right) & 0x1F);
+                    Return((JsValue)(TypeConverter.ToInt32(left) << (int)(TypeConverter.ToUint32(right) & 0x1F)));
+                    return;
 
                 case BinaryOperator.RightShift:
-                    return TypeConverter.ToInt32(left) >> (int)(TypeConverter.ToUint32(right) & 0x1F);
+                    Return((JsValue)(TypeConverter.ToInt32(left) >> (int)(TypeConverter.ToUint32(right) & 0x1F)));
+                    return;
 
                 case BinaryOperator.UnsignedRightShift:
-                    return (uint)TypeConverter.ToInt32(left) >> (int)(TypeConverter.ToUint32(right) & 0x1F);
+                    Return((JsValue)((uint)TypeConverter.ToInt32(left) >> (int)(TypeConverter.ToUint32(right) & 0x1F)));
+                    return;
 
                 case BinaryOperator.InstanceOf:
                     var f = right.TryCast<FunctionInstance>();
@@ -369,37 +489,70 @@ namespace Jint.Runtime
 
                 default:
                     ExceptionHelper.ThrowNotImplementedException();
-                    return null;
+                    Return((JsValue)null);
+                    return;
             }
 
-            return value;
+            Return((JsValue)value);
+            return;
         }
 
-        public JsValue EvaluateLogicalExpression(BinaryExpression binaryExpression)
+        public void EvaluateLogicalExpression(RuntimeState state)
         {
-            var left = _engine.GetValue(_engine.EvaluateExpression(binaryExpression.Left), true);
-
-            switch (binaryExpression.Operator)
+            BinaryExpression binaryExpression = (BinaryExpression)state.arg;
+            if (state.stage == 0)
             {
-                case BinaryOperator.LogicalAnd:
-                    if (!TypeConverter.ToBoolean(left))
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.local = _engine.GetValue(state.calleeReturnValue, true);
+                    state.stage = 1;
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, binaryExpression.Left);
+                    return;
+                }
+            }
+
+            if (state.stage == 1)
+            {
+                if (state.calleeReturned)
+                {
+                    Return((JsValue)_engine.GetValue(state.calleeReturnValue, true));
+                    return;
+                }
+                else
+                {
+                    var left = (JsValue)state.local;
+                    switch (binaryExpression.Operator)
                     {
-                        return left;
+                        case BinaryOperator.LogicalAnd:
+                            if (!TypeConverter.ToBoolean(left))
+                            {
+                                Return((JsValue)left);
+                                return;
+                            }
+
+                            Call(_engine.EvaluateExpression, binaryExpression.Right);
+                            return;
+
+                        case BinaryOperator.LogicalOr:
+                            if (TypeConverter.ToBoolean(left))
+                            {
+                                Return((JsValue)left);
+                                return;
+                            }
+
+                            Call(_engine.EvaluateExpression, binaryExpression.Right);
+                            return;
+
+                        default:
+                            ExceptionHelper.ThrowNotImplementedException();
+                            Return((JsValue)null);
+                            return;
                     }
-
-                    return _engine.GetValue(_engine.EvaluateExpression(binaryExpression.Right), true);
-
-                case BinaryOperator.LogicalOr:
-                    if (TypeConverter.ToBoolean(left))
-                    {
-                        return left;
-                    }
-
-                    return _engine.GetValue(_engine.EvaluateExpression(binaryExpression.Right), true);
-
-                default:
-                    ExceptionHelper.ThrowNotImplementedException();
-                    return null;
+                }
             }
         }
 
@@ -407,7 +560,7 @@ namespace Jint.Runtime
         {
             if (x._type == y._type)
             {
-				return StrictlyEqual(x, y);
+                return StrictlyEqual(x, y);
             }
 
             if (x._type == Types.Null && y._type == Types.Undefined)
@@ -465,7 +618,7 @@ namespace Jint.Runtime
                 return x.Equals(y);
             }
 
-                        
+
             if (x._type >= Types.None && x._type <= Types.Null)
             {
                 return true;
@@ -475,7 +628,7 @@ namespace Jint.Runtime
             {
                 var jsNumber = x as JsNumber;
                 var nx = jsNumber._value;
-                var ny = ((JsNumber) y)._value;
+                var ny = ((JsNumber)y)._value;
                 return !double.IsNaN(nx) && !double.IsNaN(ny) && nx == ny;
             }
 
@@ -508,26 +661,26 @@ namespace Jint.Runtime
                 case Types.None:
                     return true;
                 case Types.Number:
-                var nx = TypeConverter.ToNumber(x);
-                var ny = TypeConverter.ToNumber(y);
+                    var nx = TypeConverter.ToNumber(x);
+                    var ny = TypeConverter.ToNumber(y);
 
-                if (double.IsNaN(nx) && double.IsNaN(ny))
-                {
-                    return true;
-                }
-
-                if (nx == ny)
-                {
-                    if (nx == 0)
+                    if (double.IsNaN(nx) && double.IsNaN(ny))
                     {
-                        // +0 !== -0
-                        return NumberInstance.IsNegativeZero(nx) == NumberInstance.IsNegativeZero(ny);
+                        return true;
                     }
 
-                    return true;
-                }
+                    if (nx == ny)
+                    {
+                        if (nx == 0)
+                        {
+                            // +0 !== -0
+                            return NumberInstance.IsNegativeZero(nx) == NumberInstance.IsNegativeZero(ny);
+                        }
 
-                return false;
+                        return true;
+                    }
+
+                    return false;
                 case Types.String:
                     return TypeConverter.ToString(x) == TypeConverter.ToString(y);
                 case Types.Boolean:
@@ -613,20 +766,20 @@ namespace Jint.Runtime
                 case TokenType.BooleanLiteral:
                     // bool is fast enough
                     return literal.NumericValue > 0.0 ? JsBoolean.True : JsBoolean.False;
-                
+
                 case TokenType.NullLiteral:
                     // and so is null
                     return JsValue.Null;
 
                 case TokenType.NumericLiteral:
-                    return (JsValue) (literal.CachedValue = literal.CachedValue ?? JsNumber.Create(literal.NumericValue));
-                
+                    return (JsValue)(literal.CachedValue = literal.CachedValue ?? JsNumber.Create(literal.NumericValue));
+
                 case TokenType.StringLiteral:
-                    return (JsValue) (literal.CachedValue = literal.CachedValue ?? JsString.Create((string) literal.Value));
-                
+                    return (JsValue)(literal.CachedValue = literal.CachedValue ?? JsString.Create((string)literal.Value));
+
                 case TokenType.RegularExpression:
                     // should not cache
-                    return _engine.RegExp.Construct((System.Text.RegularExpressions.Regex) literal.Value, literal.Regex.Flags);
+                    return _engine.RegExp.Construct((System.Text.RegularExpressions.Regex)literal.Value, literal.Regex.Flags);
 
                 default:
                     // a rare case, above types should cover all
@@ -634,60 +787,87 @@ namespace Jint.Runtime
             }
         }
 
-        public JsValue EvaluateObjectExpression(ObjectExpression objectExpression)
+        public void EvaluateObjectExpression(RuntimeState state)
         {
+            ObjectExpression objectExpression = (ObjectExpression)state.arg;
             // http://www.ecma-international.org/ecma-262/5.1/#sec-11.1.5
+
             var propertiesCount = objectExpression.Properties.Count;
-            var obj = _engine.Object.Construct(propertiesCount);
-            for (var i = 0; i < propertiesCount; i++)
+            if (state.stage == 0)
             {
-                var property = objectExpression.Properties[i];
-//                var propName = property.Key.GetKey();
-var propName = "";//property.Key;
-throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()");
-                PropertyDescriptor previous;
-                if (!obj._properties.TryGetValue(propName, out previous))
+                if(state.local == null)
                 {
-                    previous = PropertyDescriptor.Undefined;
+                    state.local = _engine.Object.Construct(propertiesCount);
                 }
-                
+            }
+            var obj = (ObjectInstance)state.local;
+
+            if(state.stage < propertiesCount)
+            {
+                var property = objectExpression.Properties[(int)state.stage];
+                var propName = property.Key.GetKey();
+                PropertyDescriptor previous;
                 PropertyDescriptor propDesc;
+
 
                 if (property.Kind == PropertyKind.Init || property.Kind == PropertyKind.Data)
                 {
-                    var exprValue = _engine.EvaluateExpression(property.Value);
-                    var propValue = _engine.GetValue(exprValue, true);
-                    propDesc = new PropertyDescriptor(propValue, PropertyFlag.ConfigurableEnumerableWritable);
-                }
-                else if (property.Kind == PropertyKind.Get || property.Kind == PropertyKind.Set)
-                {
-                    var function = property.Value as IFunction;
-
-                    if (function == null)
+                    if (state.calleeReturned)
                     {
-                        ExceptionHelper.ThrowSyntaxError(_engine);
-                    }
+                        if (!obj._properties.TryGetValue(propName, out previous))
+                        {
+                            previous = PropertyDescriptor.Undefined;
+                        }
 
-                    ScriptFunctionInstance functionInstance;
-                    using (new StrictModeScope(function.Strict))
+                        state.calleeReturned = false;
+                        var exprValue = state.calleeReturnValue;
+                        var propValue = _engine.GetValue(exprValue, true);
+                        propDesc = new PropertyDescriptor(propValue, PropertyFlag.ConfigurableEnumerableWritable);
+                    }
+                    else
                     {
-                        functionInstance = new ScriptFunctionInstance(
-                            _engine,
-                            function,
-                            _engine.ExecutionContext.LexicalEnvironment,
-                            StrictModeScope.IsStrictModeCode
-                        );
+                        Call(_engine.EvaluateExpression, property.Value);
+                        return;
                     }
-
-                    propDesc = new GetSetPropertyDescriptor(
-                        get: property.Kind == PropertyKind.Get ? functionInstance : null,
-                        set: property.Kind == PropertyKind.Set ? functionInstance : null,
-                        flags: PropertyFlag.Enumerable | PropertyFlag.Configurable);
                 }
                 else
                 {
-                    ExceptionHelper.ThrowArgumentOutOfRangeException();
-                    return null;
+                    if (!obj._properties.TryGetValue(propName, out previous))
+                    {
+                        previous = PropertyDescriptor.Undefined;
+                    }
+
+                    if (property.Kind == PropertyKind.Get || property.Kind == PropertyKind.Set)
+                    {
+                        var function = property.Value as IFunction;
+
+                        if (function == null)
+                        {
+                            ExceptionHelper.ThrowSyntaxError(_engine);
+                        }
+
+                        ScriptFunctionInstance functionInstance;
+                        using (new StrictModeScope(function.Strict))
+                        {
+                            functionInstance = new ScriptFunctionInstance(
+                                _engine,
+                                function,
+                                _engine.ExecutionContext.LexicalEnvironment,
+                                StrictModeScope.IsStrictModeCode
+                            );
+                        }
+
+                        propDesc = new GetSetPropertyDescriptor(
+                            get: property.Kind == PropertyKind.Get ? functionInstance : null,
+                            set: property.Kind == PropertyKind.Set ? functionInstance : null,
+                            flags: PropertyFlag.Enumerable | PropertyFlag.Configurable);
+                    }
+                    else
+                    {
+                        ExceptionHelper.ThrowArgumentOutOfRangeException();
+                        Return((JsValue)null);
+                        return;
+                    }
                 }
 
                 if (previous != PropertyDescriptor.Undefined)
@@ -727,9 +907,13 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
                     // do faster direct set
                     obj._properties[propName] = propDesc;
                 }
+                state.stage++;
             }
-
-            return obj;
+            else
+            {
+                Return((JsValue)obj);
+                return;
+            }
         }
 
         /// <summary>
@@ -737,23 +921,57 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
         /// </summary>
         /// <param name="memberExpression"></param>
         /// <returns></returns>
-        public Reference EvaluateMemberExpression(MemberExpression memberExpression)
+        public void EvaluateMemberExpression(RuntimeState state)
         {
-            var baseReference = _engine.EvaluateExpression(memberExpression.Object);
-            var baseValue = _engine.GetValue(baseReference, false);
+            MemberExpression memberExpression = (MemberExpression)state.arg;
 
-            string propertyNameString;
-            if (!memberExpression.Computed) // index accessor ?
+            if (state.stage == 0)
             {
-                // we can take fast path without querying the engine again
-                propertyNameString = ((Identifier) memberExpression.Property).Name;
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.local = state.calleeReturnValue;
+                    state.stage = 1;
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, memberExpression.Object);
+                    return;
+                }
             }
-            else
+
+            string propertyNameString = "";
+            if (state.stage == 1)
             {
-                var propertyNameReference = _engine.EvaluateExpression(memberExpression.Property);
-                var propertyNameValue = _engine.GetValue(propertyNameReference, true);
-                propertyNameString = TypeConverter.ToString(propertyNameValue);
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    var propertyNameReference = state.calleeReturnValue;
+                    var propertyNameValue = _engine.GetValue(propertyNameReference, true);
+                    propertyNameString = TypeConverter.ToString(propertyNameValue);
+                    state.stage = 2;
+                }
+                else
+                {
+                    if (!memberExpression.Computed) // index accessor ?
+                    {
+                        // we can take fast path without querying the engine again
+                        propertyNameString = ((Identifier)memberExpression.Property).Name;
+                        state.stage = 2;
+                    }
+                    else
+                    {
+                        Call(_engine.EvaluateExpression, memberExpression.Property);
+                        return;
+                    }
+                }
             }
+
+            // Stage 2
+
+
+            var baseReference = state.local;
+            var baseValue = _engine.GetValue(baseReference, false);
 
             TypeConverter.CheckObjectCoercible(_engine, baseValue, memberExpression, baseReference);
 
@@ -762,13 +980,14 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
                 var r = baseReference as Reference;
                 _engine._referencePool.Return(r);
             }
-            return _engine._referencePool.Rent(baseValue, propertyNameString, StrictModeScope.IsStrictModeCode);
+            Return((Reference)(_engine._referencePool.Rent(baseValue, propertyNameString, StrictModeScope.IsStrictModeCode)));
+            return;
         }
 
         public JsValue EvaluateFunctionExpression(IFunction functionExpression)
         {
             var funcEnv = LexicalEnvironment.NewDeclarativeEnvironment(_engine, _engine.ExecutionContext.LexicalEnvironment);
-            var envRec = (DeclarativeEnvironmentRecord) funcEnv._record;
+            var envRec = (DeclarativeEnvironmentRecord)funcEnv._record;
 
             var closure = new ScriptFunctionInstance(
                 _engine,
@@ -785,134 +1004,243 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
             return closure;
         }
 
-        public JsValue EvaluateCallExpression(CallExpression callExpression)
+        public class EvaluateCallExpressionLocal
         {
-            var callee = _engine.EvaluateExpression(callExpression.Callee);
-            
-            // todo: implement as in http://www.ecma-international.org/ecma-262/5.1/#sec-11.2.4
+            public object callee;
+            public object arguments;
+        };
 
-            var arguments = ArrayExt.Empty<JsValue>();
-            if (callExpression.Cached)
+        public void EvaluateCallExpression(RuntimeState state)
+        {
+            CallExpression callExpression = (CallExpression)state.arg;
+            EvaluateCallExpressionLocal local = null;
+
+            if (state.stage == 0)
             {
-                arguments = (JsValue[]) callExpression.CachedArguments;
-            }
-            else
-            {
-                var allLiteral = true;
-                if (callExpression.Arguments.Count > 0)
+                if (state.calleeReturned)
                 {
-                    arguments = _engine._jsValueArrayPool.RentArray(callExpression.Arguments.Count);
-                    BuildArguments(callExpression.Arguments, arguments, out allLiteral);
-                }
-
-                if (callExpression.CanBeCached)
-                {
-                    // The arguments array can be cached if they are all literals
-                    if (allLiteral)
-                    {
-                        callExpression.CachedArguments = arguments;
-                        callExpression.Cached = true;
-                    }
-                    else
-                    {
-                        callExpression.CanBeCached = false;
-                    }
-                }
-            }
-
-            var func = _engine.GetValue(callee, false);
-
-            var r = callee as Reference;
-            if (_maxRecursionDepth >= 0)
-            {
-                var stackItem = new CallStackElement(callExpression, func, r?._name ?? "anonymous function");
-
-                var recursionDepth = _engine.CallStack.Push(stackItem);
-
-                if (recursionDepth > _maxRecursionDepth)
-                {
-                    _engine.CallStack.Pop();
-                    ExceptionHelper.ThrowRecursionDepthOverflowException(_engine.CallStack, stackItem.ToString());
-                }
-            }
-
-            if (func._type == Types.Undefined)
-            {
-                ExceptionHelper.ThrowTypeError(_engine, r == null ? "" : $"Object has no method '{r.GetReferencedName()}'");
-            }
-
-            if (func._type != Types.Object)
-            {
-                if (_referenceResolver == null || !_referenceResolver.TryGetCallable(_engine, callee, out func))
-                {
-                    ExceptionHelper.ThrowTypeError(_engine,
-                        r == null ? "" : $"Property '{r.GetReferencedName()}' of object is not a function");
-                }
-            }
-
-            var callable = func as ICallable;
-            if (callable == null)
-            {
-                ExceptionHelper.ThrowTypeError(_engine);
-            }
-
-            var thisObject = Undefined.Instance;
-            if (r != null)
-            {
-                if (r.IsPropertyReference())
-                {
-                    thisObject = r._baseValue;
+                    state.calleeReturned = false;
+                    state.local = local = new EvaluateCallExpressionLocal();
+                    local.callee = state.calleeReturnValue;
+                    local.arguments = ArrayExt.Empty<JsValue>();
+                    state.stage = 1;
                 }
                 else
                 {
-                    var env = (EnvironmentRecord) r._baseValue;
-                    thisObject = env.ImplicitThisValue();
+                    Call(_engine.EvaluateExpression, callExpression.Callee);
+                    return;
                 }
-                
-                // is it a direct call to eval ? http://www.ecma-international.org/ecma-262/5.1/#sec-15.1.2.1.1
-                if (r._name == "eval" && callable is EvalFunctionInstance)
+            }
+
+            if (state.stage == 1)
+            {
+
+                if (local == null) local = (EvaluateCallExpressionLocal)state.local;
+                var callee = local.callee;
+
+                // todo: implement as in http://www.ecma-international.org/ecma-262/5.1/#sec-11.2.4
+
+                var arguments = (JsValue[])local.arguments;
+                if (callExpression.Cached)
                 {
-                    var instance = callable as EvalFunctionInstance;
-                    var value = instance.Call(thisObject, arguments, true);
-                    _engine._referencePool.Return(r);
-                    return value;
+                    arguments = (JsValue[])callExpression.CachedArguments;
+                }
+                else
+                {
+                    var allLiteral = true;
+                    if (callExpression.Arguments.Count > 0)
+                    {
+                        if (state.calleeReturned)
+                        {
+                            state.calleeReturned = false;
+                            var ret = (BuildArgumentsReturnType)state.calleeReturnValue;
+                            allLiteral = ret.local;
+                            local.arguments = arguments = ret.arguments;
+                        }
+                        else
+                        {
+                            arguments = _engine._jsValueArrayPool.RentArray(callExpression.Arguments.Count);
+                            var args = new BuildArgumentsArgsType();
+                            args.expressionArguments = callExpression.Arguments;
+                            args.targetArray = arguments;
+                            Call(BuildArguments, args);
+                            return;
+                        }
+
+                    }
+
+                    if (callExpression.CanBeCached)
+                    {
+                        // The arguments array can be cached if they are all literals
+                        if (allLiteral)
+                        {
+                            callExpression.CachedArguments = arguments;
+                            callExpression.Cached = true;
+                        }
+                        else
+                        {
+                            callExpression.CanBeCached = false;
+                        }
+                    }
+                }
+
+                var func = _engine.GetValue(callee, false);
+
+                var r = callee as Reference;
+                if (_maxRecursionDepth >= 0)
+                {
+                    var stackItem = new CallStackElement(callExpression, func, r?._name ?? "anonymous function");
+
+                    var recursionDepth = _engine.CallStack.Push(stackItem);
+
+                    if (recursionDepth > _maxRecursionDepth)
+                    {
+                        _engine.CallStack.Pop();
+                        ExceptionHelper.ThrowRecursionDepthOverflowException(_engine.CallStack, stackItem.ToString());
+                    }
+                }
+
+                if (func._type == Types.Undefined)
+                {
+                    ExceptionHelper.ThrowTypeError(_engine, r == null ? "" : $"Object has no method '{r.GetReferencedName()}'");
+                }
+
+                if (func._type != Types.Object)
+                {
+                    if (_referenceResolver == null || !_referenceResolver.TryGetCallable(_engine, callee, out func))
+                    {
+                        ExceptionHelper.ThrowTypeError(_engine,
+                            r == null ? "" : $"Property '{r.GetReferencedName()}' of object is not a function");
+                    }
+                }
+
+                var callable = func as ICallable;
+
+                if (callable == null)
+                {
+                    ExceptionHelper.ThrowTypeError(_engine);
+                }
+
+                var thisObject = Undefined.Instance;
+                if (r != null)
+                {
+                    if (r.IsPropertyReference())
+                    {
+                        thisObject = r._baseValue;
+                    }
+                    else
+                    {
+                        var env = (EnvironmentRecord)r._baseValue;
+                        thisObject = env.ImplicitThisValue();
+                    }
+
+                    // is it a direct call to eval ? http://www.ecma-international.org/ecma-262/5.1/#sec-15.1.2.1.1
+                    /*                if (r._name == "eval" && callable is EvalFunctionInstance)
+                                    {
+                                        var instance = callable as EvalFunctionInstance;
+                                        var value = instance.Call(thisObject, arguments, true);
+                                        _engine._referencePool.Return(r);
+                                        Return(value);
+                                        return;
+                                    }*/
+                }
+
+                if (callable is ScriptFunctionInstance)
+                {
+                    state.stage = 2;
+                    state.local = arguments;
+                    state.local2 = r;
+
+                    _engine.Call((callable as ScriptFunctionInstance).CallState, new CallArgs(thisObject, arguments));
+                    return;
+                }
+
+                var result = callable.Call(thisObject, arguments);
+
+                if (_maxRecursionDepth >= 0)
+                {
+                    _engine.CallStack.Pop();
+                }
+
+                if (!callExpression.Cached && arguments.Length > 0)
+                {
+                    _engine._jsValueArrayPool.ReturnArray(arguments);
+                }
+
+                _engine._referencePool.Return(r);
+                Return((JsValue)result);
+                return;
+
+            }
+
+
+            // Stage 2
+
+            if(state.stage == 2)
+            {
+                if(state.calleeReturned)
+                {
+                    if (_maxRecursionDepth >= 0)
+                    {
+                        _engine.CallStack.Pop();
+                    }
+                    var arguments = (JsValue[])state.local;
+
+                    if (!callExpression.Cached && arguments.Length > 0)
+                    {
+                        _engine._jsValueArrayPool.ReturnArray(arguments);
+                    }
+
+                    _engine._referencePool.Return(state.local2 as Reference);
+                    Return((JsValue)state.calleeReturnValue);
+                    return;
+
                 }
             }
-
-            var result = callable.Call(thisObject, arguments);
-
-            if (_maxRecursionDepth >= 0)
-            {
-                _engine.CallStack.Pop();
-            }
-
-            if (!callExpression.Cached && arguments.Length > 0)
-            {
-                _engine._jsValueArrayPool.ReturnArray(arguments);
-            }
-
-            _engine._referencePool.Return(r);
-            return result;
         }
 
-        public JsValue EvaluateSequenceExpression(SequenceExpression sequenceExpression)
+        public void EvaluateSequenceExpression(RuntimeState state)
         {
+            SequenceExpression sequenceExpression = (SequenceExpression)state.arg;
+
             var result = Undefined.Instance;
-            var expressionsCount = sequenceExpression.Expressions.Count;
-            for (var i = 0; i < expressionsCount; i++)
+            if (state.calleeReturned)
             {
-                var expression = sequenceExpression.Expressions[i];
-                result = _engine.GetValue(_engine.EvaluateExpression(expression), true);
+                state.calleeReturned = false;
+                result = _engine.GetValue(state.calleeReturnValue, true);
             }
 
-            return result;
+            if (state.stage < sequenceExpression.Expressions.Count)
+            {
+                var expression = sequenceExpression.Expressions[(int)state.stage];
+                Call(_engine.EvaluateExpression, expression);
+                state.stage++;
+                return;
+            }
+            else
+            {
+                Return((JsValue)result);
+                return;
+            }
         }
 
-        public JsValue EvaluateUpdateExpression(UpdateExpression updateExpression)
+        public void EvaluateUpdateExpression(RuntimeState state)
         {
-            var value = _engine.EvaluateExpression(updateExpression.Argument);
+            UpdateExpression updateExpression = (UpdateExpression)state.arg;
+            if (state.calleeReturned)
+            {
+                state.calleeReturned = false;
+            }
+            else
+            {
+                Call(_engine.EvaluateExpression, updateExpression.Argument);
+                return;
+            }
 
-            var r = (Reference) value;
+
+            var value = state.calleeReturnValue;
+
+            var r = (Reference)value;
             r.AssertValid(_engine);
 
             var oldValue = TypeConverter.ToNumber(_engine.GetValue(value, false));
@@ -932,7 +1260,7 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
 
             _engine.PutValue(r, newValue);
             _engine._referencePool.Return(r);
-            return updateExpression.Prefix ? newValue : oldValue;
+            Return((JsValue)(updateExpression.Prefix ? newValue : oldValue));
         }
 
         public JsValue EvaluateThisExpression(ThisExpression thisExpression)
@@ -940,14 +1268,47 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
             return _engine.ExecutionContext.ThisBinding;
         }
 
-        public JsValue EvaluateNewExpression(NewExpression newExpression)
+        public void EvaluateNewExpression(RuntimeState state)
         {
-            var arguments = _engine._jsValueArrayPool.RentArray(newExpression.Arguments.Count);
-            bool o1;
-            BuildArguments(newExpression.Arguments, arguments, out o1);
+            NewExpression newExpression = (NewExpression)state.arg;
+
+            if (state.stage == 0)
+            {
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.stage = 1;
+                    var ret = (BuildArgumentsReturnType)state.calleeReturnValue;
+                    state.local = ret.arguments;
+                }
+                else
+                {
+                    var args = _engine._jsValueArrayPool.RentArray(newExpression.Arguments.Count);
+                    var a = new BuildArgumentsArgsType();
+                    a.expressionArguments = newExpression.Arguments;
+                    a.targetArray = args;
+                    state.local = args;
+                    Call(BuildArguments, a);
+                    return;
+                }
+            }
+
+            // Stage 1
+
+            if (state.calleeReturned)
+            {
+                state.calleeReturned = false;
+            }
+            else
+            {
+                // todo: optimize by defining a common abstract class or interface
+                Call(_engine.EvaluateExpression, newExpression.Callee);
+                return;
+            }
 
             // todo: optimize by defining a common abstract class or interface
-            var callee = _engine.GetValue(_engine.EvaluateExpression(newExpression.Callee), true).TryCast<IConstructor>();
+            var callee = _engine.GetValue(state.calleeReturnValue, true).TryCast<IConstructor>();
+            var arguments = (JsValue[])state.local;
 
             if (callee == null)
             {
@@ -959,51 +1320,90 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
 
             _engine._jsValueArrayPool.ReturnArray(arguments);
 
-            return instance;
+            Return((JsValue)instance);
+            return;
         }
 
-        public JsValue EvaluateArrayExpression(ArrayExpression arrayExpression)
+        public void EvaluateArrayExpression(RuntimeState state)
         {
+            ArrayExpression arrayExpression = (ArrayExpression)state.arg;
+
             var elements = arrayExpression.Elements;
             var count = elements.Count;
-            
-            var a = _engine.Array.ConstructFast((uint) count);
-            for (var n = 0; n < count; n++)
+
+            if (state.stage == 0)
             {
-                var expr = elements[n];
-                if (expr != null)
+                state.local = _engine.Array.ConstructFast((uint)count);
+            }
+
+            if (state.stage < count)
+            {
+                if (state.calleeReturned)
                 {
-                    var value = _engine.GetValue(_engine.EvaluateExpression((Expression) expr), true);
-                    a.SetIndexValue((uint) n, value, updateLength: false);
+                    state.calleeReturned = false;
+                    ((ArrayInstance)(state.local)).SetIndexValue((uint)state.stage, _engine.GetValue(state.calleeReturnValue, true), updateLength: false);
+                    state.stage++;
+                    return;
+                }
+                else
+                {
+                    var expr = elements[(int)state.stage];
+                    if (expr != null)
+                    {
+                        Call(_engine.EvaluateExpression, (Expression)expr);
+                        return;
+                    }
+                    state.stage++;
+                    return;
                 }
             }
-            return a;
+            else
+            {
+                Return((JsValue)state.local);
+                return;
+            }
         }
 
-        public JsValue EvaluateUnaryExpression(UnaryExpression unaryExpression)
+        public void EvaluateUnaryExpression(RuntimeState state)
         {
-            var value = _engine.EvaluateExpression(unaryExpression.Argument);
+            UnaryExpression unaryExpression = (UnaryExpression)state.arg;
+
+            if (state.calleeReturned)
+            {
+                state.calleeReturned = false;
+            }
+            else
+            {
+                Call(_engine.EvaluateExpression, unaryExpression.Argument);
+                return;
+            }
+            var value = state.calleeReturnValue;
 
             switch (unaryExpression.Operator)
             {
                 case UnaryOperator.Plus:
-                    return TypeConverter.ToNumber(_engine.GetValue(value, true));
+                    Return((JsValue)(TypeConverter.ToNumber(_engine.GetValue(value, true))));
+                    return;
 
                 case UnaryOperator.Minus:
                     var n = TypeConverter.ToNumber(_engine.GetValue(value, true));
-                    return double.IsNaN(n) ? double.NaN : n*-1;
+                    Return((JsValue)(double.IsNaN(n) ? double.NaN : n * -1));
+                    return;
 
                 case UnaryOperator.BitwiseNot:
-                    return ~TypeConverter.ToInt32(_engine.GetValue(value, true));
+                    Return((JsValue)(~TypeConverter.ToInt32(_engine.GetValue(value, true))));
+                    return;
 
                 case UnaryOperator.LogicalNot:
-                    return !TypeConverter.ToBoolean(_engine.GetValue(value, true));
+                    Return((JsValue)(!TypeConverter.ToBoolean(_engine.GetValue(value, true))));
+                    return;
 
                 case UnaryOperator.Delete:
                     var r = value as Reference;
                     if (r == null)
                     {
-                        return true;
+                        Return((JsValue)(true));
+                        return;
                     }
                     if (r.IsUnresolvableReference())
                     {
@@ -1013,14 +1413,16 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
                         }
 
                         _engine._referencePool.Return(r);
-                        return true;
+                        Return((JsValue)(true));
+                        return;
                     }
                     if (r.IsPropertyReference())
                     {
                         var o = TypeConverter.ToObject(_engine, r.GetBase());
                         var jsValue = o.Delete(r._name, r._strict);
                         _engine._referencePool.Return(r);
-                        return jsValue;
+                        Return((JsValue)(jsValue));
+                        return;
                     }
                     if (r._strict)
                     {
@@ -1031,11 +1433,13 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
                     var referencedName = r.GetReferencedName();
                     _engine._referencePool.Return(r);
 
-                    return bindings.DeleteBinding(referencedName);
+                    Return((JsValue)(bindings.DeleteBinding(referencedName)));
+                    return;
 
                 case UnaryOperator.Void:
                     _engine.GetValue(value, true);
-                    return Undefined.Instance;
+                    Return((JsValue)(Undefined.Instance));
+                    return;
 
                 case UnaryOperator.TypeOf:
                     r = value as Reference;
@@ -1044,7 +1448,8 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
                         if (r.IsUnresolvableReference())
                         {
                             _engine._referencePool.Return(r);
-                            return "undefined";
+                            Return((JsValue)("undefined"));
+                            return;
                         }
                     }
 
@@ -1052,41 +1457,79 @@ throw new Exception("ExpressionInterpreter.cs - not sure how to replace GetKey()
 
                     if (v.IsUndefined())
                     {
-                        return "undefined";
+                        Return((JsValue)("undefined"));
+                        return;
                     }
                     if (v.IsNull())
                     {
-                        return "object";
+                        Return((JsValue)("object"));
+                        return;
                     }
                     switch (v.Type)
                     {
-                        case Types.Boolean: return "boolean";
-                        case Types.Number: return "number";
-                        case Types.String: return "string";
+                        case Types.Boolean: Return((JsValue)("boolean")); return;
+                        case Types.Number: Return((JsValue)("number")); return;
+                        case Types.String: Return((JsValue)("string")); return;
                     }
                     if (v.TryCast<ICallable>() != null)
                     {
-                        return "function";
+                        Return((JsValue)("function"));
+                        return;
                     }
-                    return "object";
+                    Return((JsValue)("object"));
+                    return;
 
                 default:
                     ExceptionHelper.ThrowArgumentException();
-                    return null;
+                    Return((JsValue)(null));
+                    return;
             }
         }
 
-        private void BuildArguments(
-            List<ArgumentListElement> expressionArguments, 
-            JsValue[] targetArray,
-            out bool cacheable)
+        public class BuildArgumentsArgsType
         {
-            cacheable = true;
-            for (var i = 0; i < (uint) targetArray.Length; i++)
+            public List<ArgumentListElement> expressionArguments;
+            public JsValue[] targetArray;
+        }
+        public class BuildArgumentsReturnType
+        {
+            public bool local;
+            public JsValue[] arguments;
+        }
+        public void BuildArguments(RuntimeState state)
+        {
+            BuildArgumentsArgsType args = (BuildArgumentsArgsType)state.arg;
+
+            List<ArgumentListElement> expressionArguments = args.expressionArguments;
+            JsValue[] targetArray = args.targetArray;
+
+            state.local = true;
+            if (state.stage < targetArray.Length)
             {
-                var argument = (Expression) expressionArguments[i];
-                targetArray[i] = _engine.GetValue(_engine.EvaluateExpression(argument), true);
-                cacheable &= argument is Literal;
+                if (state.calleeReturned)
+                {
+                    var argument = (Expression)expressionArguments[(int)state.stage];
+                    targetArray[(int)state.stage] = _engine.GetValue(state.calleeReturnValue, true);
+                    state.local = (bool)state.local & (argument is Literal);
+                    state.calleeReturned = false;
+                    state.stage++;
+                    return;
+                }
+                else
+                {
+                    var argument = (Expression)expressionArguments[(int)state.stage];
+                    Call(_engine.EvaluateExpression, argument);
+                    return;
+                }
+
+            }
+            else
+            {
+                var ret = new BuildArgumentsReturnType();
+                ret.local = (bool)state.local;
+                ret.arguments = targetArray;
+                Return(ret);
+                return;
             }
         }
     }

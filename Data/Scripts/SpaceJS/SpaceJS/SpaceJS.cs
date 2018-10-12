@@ -171,13 +171,14 @@ namespace SpaceJS
             {
                 if(engine != null)
                 {
-                    engine.Step();
+                    // Throttle
+                    for (uint i = 0; i < 100 && engine.Step(); i++) ;
                 }
             }
             catch (Exception e)
             {
                 engine.Clear();
-                AppendCustomInfo("Error: " + e.Message + "\n");
+                AppendCustomInfo("Error: " + e + "\n");
             }
 
             // TODO - Implement events.

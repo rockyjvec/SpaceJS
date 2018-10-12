@@ -1,9 +1,12 @@
+using System;
 using System.Text.RegularExpressions;
+using Esprima.Ast;
 
 namespace Esprima.Ast
 {
     public class Literal : Node,
-        Expression
+        Expression,
+        PropertyKey
     {
         public string StringValue => TokenType == TokenType.StringLiteral ? Value as string : null;
         public readonly double NumericValue;
@@ -61,6 +64,12 @@ namespace Esprima.Ast
             Regex = new RegexValue(pattern, flags);
             TokenType = TokenType.RegularExpression;
             Raw = raw;
+        }
+
+        string PropertyKey.GetKey()
+        {
+            var s = Value as string;
+            return s ?? Convert.ToString(Value);
         }
     }
 }

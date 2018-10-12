@@ -23,7 +23,7 @@ namespace Jint.Runtime
         private void ExecuteStatement(RuntimeState state)
         {
             Statement statement = (Statement)state.arg;
-            if(state.calleeReturned)
+            if (state.calleeReturned)
             {
                 Return(state.calleeReturnValue);
                 return;
@@ -42,23 +42,45 @@ namespace Jint.Runtime
         public void ExecuteExpressionStatement(RuntimeState state)
         {
             ExpressionStatement expressionStatement = (ExpressionStatement)state.arg;
-            // TODO - possibly will need to add expressions to the state machine.
-            var exprRef = _engine.EvaluateExpression(expressionStatement.Expression);
-            Return(new Completion(CompletionType.Normal, _engine.GetValue(exprRef, true), null));
-            return;
+
+            if (state.calleeReturned)
+            {
+                Return(new Completion(CompletionType.Normal, _engine.GetValue(state.calleeReturnValue, true), null));
+            }
+            else
+            {
+                Call(_engine.EvaluateExpression, expressionStatement.Expression);
+                return;
+            }
         }
 
         public void ExecuteIfStatement(RuntimeState state)
         {
             IfStatement ifStatement = (IfStatement)state.arg;
-            if(state.calleeReturned)
+
+            if (state.stage == 0)
+            {
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.stage = 1;
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, ifStatement.Test);
+                    return;
+                }
+            }
+
+            // Stage 1
+
+            if (state.calleeReturned)
             {
                 Return(state.calleeReturnValue);
                 return;
             }
 
-            // TODO - possibly will need to add expressions to the state machine.
-            if (TypeConverter.ToBoolean(_engine.GetValue(_engine.EvaluateExpression(ifStatement.Test), true)))
+            if (TypeConverter.ToBoolean(_engine.GetValue(state.calleeReturnValue, true)))
             {
                 Call(_engine.ExecuteStatement, ifStatement.Consequent);
             }
@@ -81,7 +103,7 @@ namespace Jint.Runtime
             // TODO: Esprima added Statement.Label, maybe not necessary as this line is finding the
             // containing label and could keep a table per program with all the labels
             // labeledStatement.Body.LabelSet = labeledStatement.Label;
-            if(state.calleeReturned)
+            if (state.calleeReturned)
             {
                 Completion result = (Completion)state.calleeReturnValue;
                 if (result.Type == CompletionType.Break && result.Identifier == labeledStatement.Label.Name)
@@ -115,7 +137,7 @@ namespace Jint.Runtime
 
             ExecuteDoWhileStatementLocal local;
 
-            if(state.local == null)
+            if (state.local == null)
             {
                 state.local = local = new ExecuteDoWhileStatementLocal();
                 local.v = Undefined.Instance;
@@ -126,42 +148,62 @@ namespace Jint.Runtime
                 local = (ExecuteDoWhileStatementLocal)state.local;
             }
 
-            if(state.calleeReturned)
+            if (state.stage == 0)
             {
-                var stmt = (Completion)state.calleeReturnValue;
-                if (!ReferenceEquals(stmt.Value, null))
+                if (state.calleeReturned)
                 {
-                    local.v = stmt.Value;
-                }
-                if (stmt.Type != CompletionType.Continue || stmt.Identifier != doWhileStatement?.LabelSet?.Name)
-                {
-                    if (stmt.Type == CompletionType.Break && (stmt.Identifier == null || stmt.Identifier == doWhileStatement?.LabelSet?.Name))
+                    state.calleeReturned = false;
+                    var stmt = (Completion)state.calleeReturnValue;
+                    if (!ReferenceEquals(stmt.Value, null))
                     {
-                        Return(new Completion(CompletionType.Normal, local.v, null));
-                        return;
+                        local.v = stmt.Value;
+                    }
+                    if (stmt.Type != CompletionType.Continue || stmt.Identifier != doWhileStatement?.LabelSet?.Name)
+                    {
+                        if (stmt.Type == CompletionType.Break && (stmt.Identifier == null || stmt.Identifier == doWhileStatement?.LabelSet?.Name))
+                        {
+                            Return(new Completion(CompletionType.Normal, local.v, null));
+                            return;
+                        }
+
+                        if (stmt.Type != CompletionType.Normal)
+                        {
+                            Return(stmt);
+                            return;
+                        }
                     }
 
-                    if (stmt.Type != CompletionType.Normal)
-                    {
-                        Return(stmt);
-                        return;
-                    }
+
+                    state.stage = 1;
                 }
+                else
+                {
+                    Call(_engine.ExecuteStatement, doWhileStatement.Body);
+                    return;
+                }
+            }
 
-                var exprRef = _engine.EvaluateExpression(doWhileStatement.Test);
-                local.iterating = TypeConverter.ToBoolean(_engine.GetValue(exprRef, true));
+            // Stage 1
+            if (state.calleeReturned)
+            {
+                state.calleeReturned = false;
+                local.iterating = TypeConverter.ToBoolean(_engine.GetValue(state.calleeReturnValue, true));
 
-                if(!local.iterating)
+                if (!local.iterating)
                 {
 
                     Return(new Completion(CompletionType.Normal, local.v, null));
                     return;
                 }
+                state.stage = 0;
+                return;
 
             }
-
-            Call(_engine.ExecuteStatement, doWhileStatement.Body);
-            return;
+            else
+            {
+                Call(_engine.EvaluateExpression, doWhileStatement.Test);
+                return;
+            }
 
         }
 
@@ -179,7 +221,7 @@ namespace Jint.Runtime
         {
             WhileStatement whileStatement = (WhileStatement)state.arg;
             ExecuteWhileStatementLocal local;
-            if(state.local == null)
+            if (state.local == null)
             {
                 state.local = local = new ExecuteWhileStatementLocal();
                 local.v = Undefined.Instance;
@@ -189,8 +231,32 @@ namespace Jint.Runtime
                 local = (ExecuteWhileStatementLocal)state.local;
             }
 
-            if(state.calleeReturned)
+            if (state.stage == 0)
             {
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.stage = 1;
+                    var jsValue = _engine.GetValue(state.calleeReturnValue, true);
+                    if (!TypeConverter.ToBoolean(jsValue))
+                    {
+                        Return(new Completion(CompletionType.Normal, local.v, null));
+                        return;
+                    }
+
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, whileStatement.Test);
+                    return;
+                }
+            }
+
+            // Stage 1
+
+            if (state.calleeReturned)
+            {
+                state.calleeReturned = false;
                 var stmt = (Completion)state.calleeReturnValue;
 
                 if (!ReferenceEquals(stmt.Value, null))
@@ -212,15 +278,11 @@ namespace Jint.Runtime
                         return;
                     }
                 }
+                state.stage = 0;
+                return;
             }
 
-            var jsValue = _engine.GetValue(_engine.EvaluateExpression(whileStatement.Test), true);
-            if (!TypeConverter.ToBoolean(jsValue))
-            {
-                Return(new Completion(CompletionType.Normal, local.v, null));
-            }
-
-            Call( _engine.ExecuteStatement, whileStatement.Body);
+            Call(_engine.ExecuteStatement, whileStatement.Body);
             return;
         }
 
@@ -251,10 +313,14 @@ namespace Jint.Runtime
                 local = (ExecuteForStatementLocal)state.local;
             }
 
-            if(local.stage == 0)
+            if (local.stage == 0)
             {
-                if(state.calleeReturned)
+                if (state.calleeReturned)
                 {
+                    if (state.stage == 1)
+                    {
+                        _engine.GetValue(state.calleeReturnValue, true);
+                    }
                     state.calleeReturned = false;
                     state.calleeReturnValue = null;
                     local.stage = 1;
@@ -270,15 +336,17 @@ namespace Jint.Runtime
                     }
                     else
                     {
-                        _engine.GetValue(_engine.EvaluateExpression(local.init), true);
+                        state.stage = 1;
+                        Call(_engine.EvaluateExpression, local.init);
+                        return;
                     }
                 }
                 local.stage = 1;
             }
 
-            if(local.stage == 1)
+            if (local.stage == 1)
             {
-                if (state.calleeReturned)
+                if (state.calleeReturned && state.stage != 10)
                 {
                     Completion stmt = (Completion)state.calleeReturnValue;
                     state.calleeReturned = false;
@@ -305,22 +373,46 @@ namespace Jint.Runtime
                     }
                     if (forStatement.Update != null)
                     {
-                        _engine.GetValue(_engine.EvaluateExpression(forStatement.Update), true);
+                        local.stage = 2;
+                        Call(_engine.EvaluateExpression, forStatement.Update);
+                        return;
                     }
                 }
 
                 if (forStatement.Test != null)
                 {
-                    var testExprRef = _engine.EvaluateExpression(forStatement.Test);
-                    if (!TypeConverter.ToBoolean(_engine.GetValue(testExprRef, true)))
+                    if (state.calleeReturned)
                     {
-                        Return(new Completion(CompletionType.Normal, local.v, null));
+                        state.stage = 0;
+                        state.calleeReturned = false;
+                        var testExprRef = state.calleeReturnValue;
+                        if (!TypeConverter.ToBoolean(_engine.GetValue(testExprRef, true)))
+                        {
+                            Return(new Completion(CompletionType.Normal, local.v, null));
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        Call(_engine.EvaluateExpression, forStatement.Test);
+                        state.stage = 10;
                         return;
                     }
                 }
 
                 Call(_engine.ExecuteStatement, forStatement.Body);
                 return;
+            }
+
+            if (local.stage == 2)
+            {
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    _engine.GetValue(state.calleeReturnValue, true);
+                    local.stage = 1;
+                    return;
+                }
             }
         }
 
@@ -348,36 +440,62 @@ namespace Jint.Runtime
         public void ExecuteForInStatement(RuntimeState state)
         {
             ForInStatement forInStatement = (ForInStatement)state.arg;
-            ExecuteForInStatementLocal local;
-            if(state.local == null)
-            {
-                state.local = local = new ExecuteForInStatementLocal();
-                local.stage = 0;
-                local.identifier = forInStatement.Left.Type == Nodes.VariableDeclaration
-                    ? (Identifier)((VariableDeclaration)forInStatement.Left).Declarations[0].Id
-                    : (Identifier)forInStatement.Left;
+            ExecuteForInStatementLocal local = null;
 
-                local.varRef = _engine.EvaluateExpression(local.identifier) as Reference;
-                local.experValue = _engine.GetValue(_engine.EvaluateExpression(forInStatement.Right), true);
-                if (local.experValue.IsUndefined() || local.experValue.IsNull())
+            if (state.stage == 0)
+            {
+                if (state.calleeReturned)
                 {
-                    Return(new Completion(CompletionType.Normal, null, null));
+                    state.calleeReturned = false;
+                    local = (ExecuteForInStatementLocal)state.local;
+                    local.varRef = state.calleeReturnValue as Reference;
+                    state.stage = 1;
+                }
+                else
+                {
+                    state.local = local = new ExecuteForInStatementLocal();
+                    local.stage = 0;
+                    local.identifier = forInStatement.Left.Type == Nodes.VariableDeclaration
+                        ? (Identifier)((VariableDeclaration)forInStatement.Left).Declarations[0].Id
+                        : (Identifier)forInStatement.Left;
+
+                    Call(_engine.EvaluateExpression, local.identifier);
                     return;
                 }
-
-                local.obj = TypeConverter.ToObject(_engine, local.experValue);
-                JsValue v = Null.Instance;
-
-                // keys are constructed using the prototype chain
-                local.cursor = local.obj;
-                local.processedKeys = new HashSet<string>();
             }
-            else
+
+            if (local == null) local = (ExecuteForInStatementLocal)state.local;
+
+            if (state.stage == 1)
             {
-                local = (ExecuteForInStatementLocal)state.local;
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    local.experValue = _engine.GetValue(state.calleeReturnValue, true);
+                    if (local.experValue.IsUndefined() || local.experValue.IsNull())
+                    {
+                        Return(new Completion(CompletionType.Normal, null, null));
+                        return;
+                    }
+
+                    local.obj = TypeConverter.ToObject(_engine, local.experValue);
+                    JsValue v = Null.Instance;
+
+                    // keys are constructed using the prototype chain
+                    local.cursor = local.obj;
+                    local.processedKeys = new HashSet<string>();
+                    state.stage = 2;
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, forInStatement.Right);
+                    return;
+                }
             }
 
-            if(state.calleeReturned)
+            // Stage 2
+
+            if (state.calleeReturned)
             {
                 Completion stmt = (Completion)state.calleeReturnValue;
 
@@ -400,7 +518,7 @@ namespace Jint.Runtime
                 }
             }
 
-            if(local.stage == 0)
+            if (local.stage == 0)
             {
                 if (!ReferenceEquals(local.cursor, null))
                 {
@@ -420,7 +538,7 @@ namespace Jint.Runtime
                 local.stage = 2;
                 return;
             }
-            if(local.stage == 2) // For loop
+            if (local.stage == 2) // For loop
             {
                 if (local.i < local.length)
                 {
@@ -434,8 +552,8 @@ namespace Jint.Runtime
             }
             if (local.stage == 3) // For contents
             {
-                if(state.calleeReturned)
-                {              
+                if (state.calleeReturned)
+                {
                     local.i++;
                     local.stage = 2;
                     return;
@@ -527,9 +645,17 @@ namespace Jint.Runtime
                 return;
             }
 
-            var jsValue = _engine.GetValue(_engine.EvaluateExpression(statement.Argument), true);
-            Return(new Completion(CompletionType.Return, jsValue, null));
-            return;
+            if (state.calleeReturned)
+            {
+                var jsValue = _engine.GetValue(state.calleeReturnValue, true);
+                Return(new Completion(CompletionType.Return, jsValue, null));
+                return;
+            }
+            else
+            {
+                Call(_engine.EvaluateExpression, statement.Argument);
+                return;
+            }
         }
 
         public class ExecuteWithStatementLocal
@@ -544,22 +670,33 @@ namespace Jint.Runtime
         public void ExecuteWithStatement(RuntimeState state)
         {
             WithStatement withStatement = (WithStatement)state.arg;
-            ExecuteWithStatementLocal local;
-            if (state.local == null)
+            ExecuteWithStatementLocal local = null;
+
+            if (state.stage == 0)
             {
-                state.local = local = new ExecuteWithStatementLocal();
-                var jsValue = _engine.GetValue(_engine.EvaluateExpression(withStatement.Object), true);
-                var obj = TypeConverter.ToObject(_engine, jsValue);
-                local.oldEnv = _engine.ExecutionContext.LexicalEnvironment;
-                var newEnv = LexicalEnvironment.NewObjectEnvironment(_engine, obj, local.oldEnv, true);
-                _engine.UpdateLexicalEnvironment(newEnv);
-            }
-            else
-            {
-                local = (ExecuteWithStatementLocal)state.local;
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.local = local = new ExecuteWithStatementLocal();
+                    var jsValue = _engine.GetValue(state.calleeReturnValue, true);
+                    var obj = TypeConverter.ToObject(_engine, jsValue);
+                    local.oldEnv = _engine.ExecutionContext.LexicalEnvironment;
+                    var newEnv = LexicalEnvironment.NewObjectEnvironment(_engine, obj, local.oldEnv, true);
+                    _engine.UpdateLexicalEnvironment(newEnv);
+                    state.stage = 1;
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, withStatement.Object);
+                    return;
+                }
             }
 
-            if(state.calleeReturned)
+            // Stage 1
+
+            if (local == null) local = (ExecuteWithStatementLocal)state.local;
+
+            if (state.calleeReturned)
             {
                 _engine.UpdateLexicalEnvironment(local.oldEnv);
                 Return(state.calleeReturnValue);
@@ -580,7 +717,30 @@ namespace Jint.Runtime
         public void ExecuteSwitchStatement(RuntimeState state)
         {
             SwitchStatement switchStatement = (SwitchStatement)state.arg;
-            if(state.calleeReturned)
+
+            if (state.stage == 0)
+            {
+                if (state.calleeReturned)
+                {
+                    state.calleeReturned = false;
+                    state.stage = 1;
+                    var jsValue = _engine.GetValue(state.calleeReturnValue, true);
+                    ExecuteSwitchBlockArgs args = new ExecuteSwitchBlockArgs();
+                    args.switchBlock = switchStatement.Cases;
+                    args.input = jsValue;
+                    Call(ExecuteSwitchBlock, args);
+                    return;
+                }
+                else
+                {
+                    Call(_engine.EvaluateExpression, switchStatement.Discriminant);
+                    return;
+                }
+            }
+
+            // Stage 1
+
+            if (state.calleeReturned)
             {
                 Completion r = (Completion)state.calleeReturnValue;
 
@@ -592,13 +752,6 @@ namespace Jint.Runtime
                 Return(r);
                 return;
             }
-
-            var jsValue = _engine.GetValue(_engine.EvaluateExpression(switchStatement.Discriminant), true);
-            ExecuteSwitchBlockArgs args = new ExecuteSwitchBlockArgs();
-            args.switchBlock = switchStatement.Cases;
-            args.input = jsValue;
-            Call(ExecuteSwitchBlock, args);
-            return;
         }
 
         public class ExecuteSwitchBlockLocal
@@ -633,9 +786,9 @@ namespace Jint.Runtime
             }
 
 
-            if(local.stage == 0) // for loop
+            if (local.stage == 0) // for loop
             {
-                if(local.i < local.switchBlockCount)
+                if (local.i < local.switchBlockCount)
                 {
                     local.stage = 1;
                 }
@@ -644,9 +797,9 @@ namespace Jint.Runtime
                     local.stage = 2;
                 }
             }
-            if(local.stage == 1) // inside for loop
+            if (local.stage == 1) // inside for loop
             {
-                if(state.calleeReturned)
+                if (state.calleeReturned && state.stage != 10)
                 {
                     Completion r = (Completion)state.calleeReturnValue;
                     if (r.Type != CompletionType.Normal)
@@ -665,10 +818,21 @@ namespace Jint.Runtime
                 }
                 else
                 {
-                    var clauseSelector = _engine.GetValue(_engine.EvaluateExpression(clause.Test), true);
-                    if (ExpressionInterpreter.StrictlyEqual(clauseSelector, input))
+                    if (state.calleeReturned)
                     {
-                        local.hit = true;
+                        state.calleeReturned = false;
+                        state.stage = 0;
+                        var clauseSelector = _engine.GetValue(state.calleeReturnValue, true);
+                        if (ExpressionInterpreter.StrictlyEqual(clauseSelector, input))
+                        {
+                            local.hit = true;
+                        }
+                    }
+                    else
+                    {
+                        state.stage = 10;
+                        Call(_engine.EvaluateExpression, clause.Test);
+                        return;
                     }
                 }
 
@@ -721,7 +885,7 @@ namespace Jint.Runtime
 
         private void ExecuteMultipleStatements(RuntimeState state)
         {
-            List<StatementListItem> statementList = (List < StatementListItem >)state.arg;
+            List<StatementListItem> statementList = (List<StatementListItem>)state.arg;
             ExecuteMultipleStatementsLocal local;
             if (state.local == null)
             {
@@ -737,7 +901,7 @@ namespace Jint.Runtime
                 local = (ExecuteMultipleStatementsLocal)state.local;
             }
 
-            if(local.stage == 0) // for loop
+            if (local.stage == 0) // for loop
             {
                 if (local.i < local.statementListCount)
                 {
@@ -749,7 +913,7 @@ namespace Jint.Runtime
                 }
             }
 
-            if(local.stage == 1) // inside for loop
+            if (local.stage == 1) // inside for loop
             {
                 if (state.calleeReturned)
                 {
@@ -773,11 +937,11 @@ namespace Jint.Runtime
                     local.stage = 0;
                     return;
                 }
-                Call(_engine.ExecuteStatement,(Statement)statementList[local.i]);
+                Call(_engine.ExecuteStatement, (Statement)statementList[local.i]);
                 return;
             }
 
-            if(local.stage == 2) // after for loop
+            if (local.stage == 2) // after for loop
             {
                 Return(new Completion(local.c.Type, local.c.GetValueOrDefault(), local.c.Identifier));
                 return;
@@ -804,6 +968,7 @@ namespace Jint.Runtime
                 }
                 return;
             }
+
             Statement s = (Statement)state.arg;
             this.Call(_engine.ExecuteStatement, s);
         }
@@ -816,9 +981,17 @@ namespace Jint.Runtime
         public void ExecuteThrowStatement(RuntimeState state)
         {
             ThrowStatement throwStatement = (ThrowStatement)state.arg;
-            var jsValue = _engine.GetValue(_engine.EvaluateExpression(throwStatement.Argument), true);
-            Return(new Completion(CompletionType.Throw, jsValue, null, throwStatement.Location));
-            return;
+            if (state.calleeReturned)
+            {
+                var jsValue = _engine.GetValue(state.calleeReturnValue, true);
+                Return(new Completion(CompletionType.Throw, jsValue, null, throwStatement.Location));
+                return;
+            }
+            else
+            {
+                Call(_engine.EvaluateExpression, throwStatement.Argument);
+                return;
+            }
         }
 
         public class ExecuteTryStatementLocal
@@ -847,9 +1020,9 @@ namespace Jint.Runtime
                 local = (ExecuteTryStatementLocal)state.local;
             }
 
-            if(local.stage == 0)
+            if (local.stage == 0)
             {
-                if(state.calleeReturned)
+                if (state.calleeReturned)
                 {
                     state.calleeReturned = false;
                     local.stage = 1;
@@ -903,7 +1076,7 @@ namespace Jint.Runtime
 
                 if (tryStatement.Finalizer != null)
                 {
-                    Call(_engine.ExecuteStatement,tryStatement.Finalizer);
+                    Call(_engine.ExecuteStatement, tryStatement.Finalizer);
                     return;
                 }
 
@@ -920,7 +1093,7 @@ namespace Jint.Runtime
         public void ExecuteProgram(RuntimeState state)
         {
             Program program = (Program)state.arg;
-            if(state.calleeReturned)
+            if (state.calleeReturned)
             {
                 Return(state.calleeReturnValue);
                 return;
@@ -931,12 +1104,12 @@ namespace Jint.Runtime
 
         public void ExecuteStatementList(RuntimeState state)
         {
-            if(state.calleeReturned)
+            if (state.calleeReturned)
             {
-                Return(state.calleeReturnValue);
+                Return((Completion)state.calleeReturnValue);
                 return;
             }
-            var statementList = (List<StatementListItem>) state.arg;
+            var statementList = (List<StatementListItem>)state.arg;
 
             // optimize common case without loop
             if (statementList.Count == 1)
@@ -953,7 +1126,7 @@ namespace Jint.Runtime
         {
             this.stack.Pop();
 
-            if(this.stack.Count > 0)
+            if (this.stack.Count > 0)
             {
                 this.stack.Peek().calleeReturnValue = o;
                 this.stack.Peek().calleeReturned = true;
@@ -967,7 +1140,7 @@ namespace Jint.Runtime
 
         public bool Step()
         {
-            if(stack.Count == 0)
+            if (stack.Count == 0)
             {
                 return false;
             }
@@ -994,32 +1167,64 @@ namespace Jint.Runtime
 
         public void ExecuteVariableDeclaration(RuntimeState state)
         {
-            VariableDeclaration statement = (VariableDeclaration) state.arg;
+            VariableDeclaration statement = (VariableDeclaration)state.arg;
             var declarationsCount = statement.Declarations.Count;
-            for (var i = 0; i < declarationsCount; i++)
+
+            if (state.stage < declarationsCount)
             {
-                var declaration = statement.Declarations[i];
+                var declaration = statement.Declarations[(int)state.stage];
                 if (declaration.Init != null)
                 {
-                    var lhs = (Reference) _engine.EvaluateExpression(declaration.Id);
-                    lhs.AssertValid(_engine);
+                    if (state.local == null)
+                    {
+                        if (state.calleeReturned)
+                        {
+                            state.calleeReturned = false;
+                            state.local = state.calleeReturnValue;
+                        }
+                        else
+                        {
+                            Call(_engine.EvaluateExpression, declaration.Id);
+                            return;
+                        }
+                    }
 
-                    var value = _engine.GetValue(_engine.EvaluateExpression(declaration.Init), true);
-                    _engine.PutValue(lhs, value);
-                    _engine._referencePool.Return(lhs);
+                    if (state.calleeReturned)
+                    {
+                        state.calleeReturned = false;
+                        var lhs = (Reference)state.local;
+                        lhs.AssertValid(_engine);
+
+                        var value = _engine.GetValue(state.calleeReturnValue, true);
+                        
+                        _engine.PutValue(lhs, value);
+                        _engine._referencePool.Return(lhs);
+                        state.local = null;
+                        state.stage++;
+                        return;
+                    }
+                    else
+                    {
+                        Call(_engine.EvaluateExpression, declaration.Init);
+                        return;
+                    }
                 }
+                state.stage++;
+                return;
             }
-
-            Return(new Completion(CompletionType.Normal, Undefined.Instance, null));
-            return;
+            else
+            {
+                Return(new Completion(CompletionType.Normal, Undefined.Instance, null));
+                return;
+            }
         }
 
         public void ExecuteBlockStatement(RuntimeState state)
         {
             BlockStatement blockStatement = (BlockStatement)state.arg;
-            if(state.calleeReturned)
+            if (state.calleeReturned)
             {
-                Return(state.calleeReturnValue);
+                Return((Completion)state.calleeReturnValue);
                 return;
             }
 

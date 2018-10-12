@@ -6,6 +6,7 @@ using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Environments;
+using Runtime;
 
 namespace Jint.Native.Function
 {
@@ -155,6 +156,85 @@ namespace Jint.Native.Function
             }*/
         }
 
+
+        public void CallState(RuntimeState state)
+        {
+            CallArgs args = (CallArgs)state.arg;
+            JsValue thisArg = args.thisObject;
+            JsValue[] arguments = args.arguments;
+
+            if (state.calleeReturned)
+            {
+                try
+                {
+                    var result = (Completion)state.calleeReturnValue;
+                    var value = result.GetValueOrDefault();
+                    var argumentInstanceRented = (bool)state.local;
+                    // we can safely release arguments if they don't escape the scope
+                    if (argumentInstanceRented
+                        && _engine.ExecutionContext.LexicalEnvironment?._record is DeclarativeEnvironmentRecord
+                        && !(result.Value is ArgumentsInstance))
+                    {
+                        var der = _engine.ExecutionContext.LexicalEnvironment._record as DeclarativeEnvironmentRecord;
+                        der.ReleaseArguments();
+                    }
+
+                    if (result.Type == CompletionType.Throw)
+                    {
+                        var ex = new JavaScriptException(value).SetCallstack(_engine, result.Location);
+                        throw ex;
+                    }
+
+                    if (result.Type == CompletionType.Return)
+                    {
+                        _engine.Return((JsValue)(value));
+                        return;
+                    }
+                }
+                finally
+                {
+                    _engine.LeaveExecutionContext();
+                }
+                _engine.Return((JsValue)(Undefined));
+                return;
+            }
+            else
+            {
+                // setup new execution context http://www.ecma-international.org/ecma-262/5.1/#sec-10.4.3
+                JsValue thisBinding;
+                if (StrictModeScope.IsStrictModeCode)
+                {
+                    thisBinding = thisArg;
+                }
+                else if (thisArg._type == Types.Undefined || thisArg._type == Types.Null)
+                {
+                    thisBinding = _engine.Global;
+                }
+                else if (thisArg._type != Types.Object)
+                {
+                    thisBinding = TypeConverter.ToObject(_engine, thisArg);
+                }
+                else
+                {
+                    thisBinding = thisArg;
+                }
+
+                var localEnv = LexicalEnvironment.NewDeclarativeEnvironment(_engine, _scope);
+
+                _engine.EnterExecutionContext(localEnv, localEnv, thisBinding);
+
+                state.local = _engine.DeclarationBindingInstantiation(
+                    DeclarationBindingType.FunctionCode,
+                    _functionDeclaration.HoistingScope.FunctionDeclarations,
+                    _functionDeclaration.HoistingScope.VariableDeclarations,
+                    this,
+                    arguments);
+
+                _engine.Call(_engine.ExecuteStatement, _functionDeclaration.Body);
+                return;
+            }
+
+        }
         /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-13.2.2
         /// </summary>

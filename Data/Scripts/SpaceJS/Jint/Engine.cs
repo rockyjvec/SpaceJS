@@ -448,16 +448,17 @@ namespace Jint
         public void ExecuteStatement(RuntimeState state)
         {
             Statement statement = (Statement)state.arg;
+
             //_lastSyntaxNode = statement;
 
-/*            if (_runBeforeStatementChecks)
-            {
-                BeforeExecuteStatement(statement);
-            }
-            */
+            /*            if (_runBeforeStatementChecks)
+                        {
+                            BeforeExecuteStatement(statement);
+                        }
+                        */
 
 
-            if(state.calleeReturned)
+            if (state.calleeReturned)
             {
                 switch (statement.Type)
                 {
@@ -478,6 +479,21 @@ namespace Jint
                     case Nodes.Program:
                         _statements.Return(state.calleeReturnValue);
                         return;
+                    case Nodes.ReturnStatement:
+                        var jsValue = ((ReturnStatement)statement).Argument == null
+                            ? Undefined.Instance
+                            : GetValue(state.calleeReturnValue, true);
+
+                        _statements.Return(new Completion(CompletionType.Return, jsValue, null));
+                        return;
+
+                    case Nodes.ExpressionStatement:
+                        _statements.Return(new Completion(
+                            CompletionType.Normal,
+                            GetValue(state.calleeReturnValue, true),
+                            null));
+                        return;
+
                     default:
                         ExceptionHelper.ThrowArgumentOutOfRangeException();
                         _statements.Return(new Completion(CompletionType.Normal, null, null));
@@ -488,31 +504,27 @@ namespace Jint
             switch (statement.Type)
             {
                 case Nodes.BlockStatement:
-                    _statements.Call(_statements.ExecuteStatementList, ((BlockStatement) statement).Body);
+                    _statements.Call(_statements.ExecuteStatementList, ((BlockStatement)statement).Body);
                     return;
 
                 case Nodes.ReturnStatement:
-                    var jsValue = ((ReturnStatement) statement).Argument == null
-                        ? Undefined.Instance
-                        : GetValue(EvaluateExpression(((ReturnStatement) statement).Argument), true);
-
-                    _statements.Return(jsValue);
+                    _statements.Call(EvaluateExpression, ((ReturnStatement)statement).Argument);
                     return;
 
                 case Nodes.VariableDeclaration:
-                    _statements.Call(_statements.ExecuteVariableDeclaration, (VariableDeclaration) statement);
+                    _statements.Call(_statements.ExecuteVariableDeclaration, (VariableDeclaration)statement);
                     return;
 
                 case Nodes.BreakStatement:
-                    _statements.Call(_statements.ExecuteBreakStatement, (BreakStatement) statement);
+                    _statements.Call(_statements.ExecuteBreakStatement, (BreakStatement)statement);
                     return;
 
                 case Nodes.ContinueStatement:
-                    _statements.Call(_statements.ExecuteContinueStatement, (ContinueStatement) statement);
+                    _statements.Call(_statements.ExecuteContinueStatement, (ContinueStatement)statement);
                     return;
 
                 case Nodes.DoWhileStatement:
-                    _statements.Call(_statements.ExecuteDoWhileStatement, (DoWhileStatement) statement);
+                    _statements.Call(_statements.ExecuteDoWhileStatement, (DoWhileStatement)statement);
                     return;
 
                 case Nodes.EmptyStatement:
@@ -520,30 +532,27 @@ namespace Jint
                     return;
 
                 case Nodes.ExpressionStatement:
-                    _statements.Return(new Completion(
-                        CompletionType.Normal,
-                        GetValue(EvaluateExpression(((ExpressionStatement)statement).Expression), true),
-                        null));
+                    _statements.Call(EvaluateExpression, ((ExpressionStatement)statement).Expression);
                     return;
 
                 case Nodes.ForStatement:
-                    _statements.Call(_statements.ExecuteForStatement, (ForStatement) statement);
+                    _statements.Call(_statements.ExecuteForStatement, (ForStatement)statement);
                     return;
 
                 case Nodes.ForInStatement:
-                    _statements.Call(_statements.ExecuteForInStatement, (ForInStatement) statement);
+                    _statements.Call(_statements.ExecuteForInStatement, (ForInStatement)statement);
                     return;
 
                 case Nodes.IfStatement:
-                    _statements.Call(_statements.ExecuteIfStatement, (IfStatement) statement);
+                    _statements.Call(_statements.ExecuteIfStatement, (IfStatement)statement);
                     return;
 
                 case Nodes.LabeledStatement:
-                    _statements.Call(_statements.ExecuteLabeledStatement, (LabeledStatement) statement);
+                    _statements.Call(_statements.ExecuteLabeledStatement, (LabeledStatement)statement);
                     return;
 
                 case Nodes.SwitchStatement:
-                    _statements.Call(_statements.ExecuteSwitchStatement, (SwitchStatement) statement);
+                    _statements.Call(_statements.ExecuteSwitchStatement, (SwitchStatement)statement);
                     return;
 
                 case Nodes.FunctionDeclaration:
@@ -551,23 +560,23 @@ namespace Jint
                     return;
 
                 case Nodes.ThrowStatement:
-                    _statements.Call(_statements.ExecuteThrowStatement, (ThrowStatement) statement);
+                    _statements.Call(_statements.ExecuteThrowStatement, (ThrowStatement)statement);
                     return;
 
                 case Nodes.TryStatement:
-                    _statements.Call(_statements.ExecuteTryStatement, (TryStatement) statement);
+                    _statements.Call(_statements.ExecuteTryStatement, (TryStatement)statement);
                     return;
 
                 case Nodes.WhileStatement:
-                    _statements.Call(_statements.ExecuteWhileStatement, (WhileStatement) statement);
+                    _statements.Call(_statements.ExecuteWhileStatement, (WhileStatement)statement);
                     return;
 
                 case Nodes.WithStatement:
-                    _statements.Call(_statements.ExecuteWithStatement, (WithStatement) statement);
+                    _statements.Call(_statements.ExecuteWithStatement, (WithStatement)statement);
                     return;
 
                 case Nodes.Program:
-                    _statements.Call(_statements.ExecuteProgram, (Program) statement);
+                    _statements.Call(_statements.ExecuteProgram, (Program)statement);
                     return;
 
                 default:
@@ -606,64 +615,99 @@ namespace Jint
             }
         }
 
-        public object EvaluateExpression(INode expression)
+        public void EvaluateExpression(RuntimeState state)
         {
+            INode expression = (INode)state.arg;
+
+            if (state.calleeReturned)
+            {
+                Return(state.calleeReturnValue);
+                return;
+            }
             _lastSyntaxNode = expression;
 
             switch (expression.Type)
             {
                 case Nodes.AssignmentExpression:
-                    return _expressions.EvaluateAssignmentExpression((AssignmentExpression) expression);
+                    Call(_expressions.EvaluateAssignmentExpression, (AssignmentExpression)expression);
+                    return;
 
                 case Nodes.ArrayExpression:
-                    return _expressions.EvaluateArrayExpression((ArrayExpression) expression);
+                    Call(_expressions.EvaluateArrayExpression, (ArrayExpression)expression);
+                    return;
 
                 case Nodes.BinaryExpression:
-                    return _expressions.EvaluateBinaryExpression((BinaryExpression) expression);
+                    Call(_expressions.EvaluateBinaryExpression, (BinaryExpression)expression);
+                    return;
 
                 case Nodes.CallExpression:
-                    return _expressions.EvaluateCallExpression((CallExpression) expression);
+                    Call(_expressions.EvaluateCallExpression, (CallExpression)expression);
+                    return;
 
                 case Nodes.ConditionalExpression:
-                    return _expressions.EvaluateConditionalExpression((ConditionalExpression) expression);
+                    Call(_expressions.EvaluateConditionalExpression, (ConditionalExpression)expression);
+                    return;
 
                 case Nodes.FunctionExpression:
-                    return _expressions.EvaluateFunctionExpression((IFunction) expression);
+                    Return(_expressions.EvaluateFunctionExpression((IFunction)expression));
+                    return;
 
                 case Nodes.Identifier:
-                    return _expressions.EvaluateIdentifier((Identifier) expression);
+                    Return(_expressions.EvaluateIdentifier((Identifier)expression));
+                    return;
 
                 case Nodes.Literal:
-                    return _expressions.EvaluateLiteral((Literal) expression);
+                    Return(_expressions.EvaluateLiteral((Literal)expression));
+                    return;
 
                 case Nodes.LogicalExpression:
-                    return _expressions.EvaluateLogicalExpression((BinaryExpression) expression);
+                    Call(_expressions.EvaluateLogicalExpression, (BinaryExpression)expression);
+                    return;
 
                 case Nodes.MemberExpression:
-                    return _expressions.EvaluateMemberExpression((MemberExpression) expression);
+                    Call(_expressions.EvaluateMemberExpression, (MemberExpression)expression);
+                    return;
 
                 case Nodes.NewExpression:
-                    return _expressions.EvaluateNewExpression((NewExpression) expression);
+                    Call(_expressions.EvaluateNewExpression, (NewExpression)expression);
+                    return;
 
                 case Nodes.ObjectExpression:
-                    return _expressions.EvaluateObjectExpression((ObjectExpression) expression);
+                    Call(_expressions.EvaluateObjectExpression, (ObjectExpression)expression);
+                    return;
 
                 case Nodes.SequenceExpression:
-                    return _expressions.EvaluateSequenceExpression((SequenceExpression) expression);
+                    Call(_expressions.EvaluateSequenceExpression, (SequenceExpression)expression);
+                    return;
 
                 case Nodes.ThisExpression:
-                    return _expressions.EvaluateThisExpression((ThisExpression) expression);
+                    Return(_expressions.EvaluateThisExpression((ThisExpression)expression));
+                    return;
 
                 case Nodes.UpdateExpression:
-                    return _expressions.EvaluateUpdateExpression((UpdateExpression) expression);
+                    Call(_expressions.EvaluateUpdateExpression, (UpdateExpression)expression);
+                    return;
 
                 case Nodes.UnaryExpression:
-                    return _expressions.EvaluateUnaryExpression((UnaryExpression) expression);
+                    Call(_expressions.EvaluateUnaryExpression, (UnaryExpression)expression);
+                    return;
 
                 default:
                     ExceptionHelper.ThrowArgumentOutOfRangeException();
-                    return null;
+                    Return(null);
+                    return;
             }
+        }
+
+
+        public void Call(Action<RuntimeState> method, object arg)
+        {
+            _statements.Call(method, arg);
+        }
+
+        public void Return(object o)
+        {
+            _statements.Return(o);
         }
 
         /// <summary>

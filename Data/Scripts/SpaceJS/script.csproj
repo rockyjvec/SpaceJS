@@ -129,6 +129,7 @@
     <Compile Include="Esprima\Ast\ObjectPattern.cs" />
     <Compile Include="Esprima\Ast\Program.cs" />
     <Compile Include="Esprima\Ast\Property.cs" />
+    <Compile Include="Esprima\Ast\PropertyKey.cs" />
     <Compile Include="Esprima\Ast\PropertyValue.cs" />
     <Compile Include="Esprima\Ast\RegexValue.cs" />
     <Compile Include="Esprima\Ast\RestElement.cs" />
@@ -187,6 +188,7 @@
     <Compile Include="Jint\Native\Boolean\BooleanConstructor.cs" />
     <Compile Include="Jint\Native\Boolean\BooleanInstance.cs" />
     <Compile Include="Jint\Native\Boolean\BooleanPrototype.cs" />
+    <Compile Include="Jint\Runtime\CallArgs.cs" />
     <Compile Include="SpaceJS\Api\Console\ConsoleInstance.cs" />
     <Compile Include="Jint\Native\Error\ErrorConstructor.cs" />
     <Compile Include="Jint\Native\Error\ErrorInstance.cs" />

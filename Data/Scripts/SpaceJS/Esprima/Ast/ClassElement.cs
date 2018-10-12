@@ -19,7 +19,7 @@ namespace Esprima.Ast
     {
         public PropertyKind Kind;
 
-        public Expression Key; // Identifier, Literal, '[' Expression ']'
+        public PropertyKey Key;
         public bool Computed;
         public PropertyValue Value;
     }

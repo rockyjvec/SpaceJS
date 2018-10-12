@@ -734,12 +734,12 @@ namespace Esprima
             return Finalize(node, new FunctionExpression(null, parameters.Parameters, method, isGenerator, LeaveHoistingScope(), _context.Strict));
         }
 
-        private Expression ParseObjectPropertyKey()
+        private PropertyKey ParseObjectPropertyKey()
         {
             var node = CreateNode();
             var token = NextToken();
 
-            Expression key = null;
+            PropertyKey key = null;
             switch (token.Type)
             {
                 case TokenType.StringLiteral:
@@ -765,7 +765,7 @@ namespace Esprima
                 case TokenType.Punctuator:
                     if ("[".Equals(token.Value))
                     {
-                        key = IsolateCoverGrammar(parseAssignmentExpression);
+                        key = IsolateCoverGrammar(parseAssignmentExpression).As<PropertyKey>();
                         Expect("]");
                     }
                     else
@@ -801,7 +801,7 @@ namespace Esprima
             var node = CreateNode();
             Token token = _lookahead;
 
-            Expression key = null;
+            PropertyKey key = null;
             PropertyValue value = null;
 
             PropertyKind kind;
@@ -2156,7 +2156,7 @@ namespace Esprima
             var shorthand = false;
             var method = false;
 
-            Expression key;
+            PropertyKey key;
             PropertyValue value;
 
             if (_lookahead.Type == TokenType.Identifier)
@@ -3585,7 +3585,7 @@ namespace Esprima
             var node = CreateNode();
 
             PropertyKind kind = PropertyKind.None;
-            Expression key = null;
+            PropertyKey key = null;
             FunctionExpression value = null;
             var computed = false;
             var method = false;
@@ -3769,7 +3769,7 @@ namespace Esprima
             var classBody = ParseClassBody();
             _context.Strict = previousStrict;
 
-            return Finalize(node, new ClassExpression(id, superClass, classBody));
+            return Finalize(node, new ClassExpression(id, superClass.As<PropertyKey>(), classBody));
         }
 
         // https://tc39.github.io/ecma262/#sec-imports
