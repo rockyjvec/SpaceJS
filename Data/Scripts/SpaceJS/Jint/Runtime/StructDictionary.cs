@@ -27,7 +27,7 @@ namespace Jint.Runtime
     /// <summary>
     /// Taken from .NET source to create performant specialized dictionary containing structs for Jint.
     /// </summary>
-    internal sealed class StructDictionary<TValue> where TValue : struct
+    internal sealed class StructDictionary<TValue>
     {
         private static readonly EqualityComparer<string> _comparer; 
         

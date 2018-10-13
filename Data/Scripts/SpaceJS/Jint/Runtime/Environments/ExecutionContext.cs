@@ -2,7 +2,7 @@
 
 namespace Jint.Runtime.Environments
 {
-    public struct ExecutionContext
+    public class ExecutionContext
     {
         public ExecutionContext(LexicalEnvironment lexicalEnvironment, LexicalEnvironment variableEnvironment, JsValue thisBinding)
         {

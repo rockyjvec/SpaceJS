@@ -16,10 +16,10 @@ namespace Jint.Runtime.Environments
         private StructDictionary<Binding> _dictionary;
         private bool _set;
         private string _key;
-        private Binding _value;
+        private Binding _value = new Binding();
 
         private const string BindingNameArguments = "arguments";
-        private Binding _argumentsBinding;
+        private Binding _argumentsBinding = new Binding();
 
         public DeclarativeEnvironmentRecord(Engine engine) : base(engine)
         {
@@ -80,7 +80,7 @@ namespace Jint.Runtime.Environments
             {
                 _set = false;
                 _key = null;
-                _value = default(Binding);
+                _value = new Binding();
             }
             
             if (key == BindingNameArguments)
@@ -96,7 +96,7 @@ namespace Jint.Runtime.Environments
 
         private bool TryGetValue(string key, out Binding value)
         {
-            value = default(Binding);
+            value = new Binding();
             if (_set && _key == key)
             {
                 value = _value;
@@ -214,7 +214,7 @@ namespace Jint.Runtime.Environments
         internal void ReleaseArguments()
         {
             _engine._argumentsInstancePool.Return(_argumentsBinding.Value as ArgumentsInstance);
-            _argumentsBinding = default(Binding);
+            _argumentsBinding = new Binding();
         }
 
         /// <summary>
@@ -253,7 +253,7 @@ namespace Jint.Runtime.Environments
             {
                 var argName = parameters[i];
                 var jsValue = i + 1 > arguments.Length ? Undefined : arguments[i];
-                Binding existing;
+                Binding existing = new Binding();
                 if (empty || !TryGetValue(argName, out existing))
                 {
                     var binding = new Binding(jsValue, false, true);

@@ -746,12 +746,9 @@ namespace Esprima.Utils
         public virtual void VisitCallExpression(CallExpression callExpression)
         {
             VisitExpression(callExpression.Callee);
-            if (callExpression.Cached == false)
+            foreach (var arg in callExpression.Arguments)
             {
-                foreach (var arg in callExpression.Arguments)
-                {
-                    VisitExpression(arg.As<Expression>());
-                }
+                VisitExpression(arg.As<Expression>());
             }
         }
 

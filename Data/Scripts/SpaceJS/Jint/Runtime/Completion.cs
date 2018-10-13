@@ -16,7 +16,7 @@ namespace Jint.Runtime
     /// <summary>
     /// http://www.ecma-international.org/ecma-262/5.1/#sec-8.9
     /// </summary>
-    public struct Completion
+    public class Completion
     {
         public Completion(CompletionType type, JsValue value, string identifier, Location location = null)
         {

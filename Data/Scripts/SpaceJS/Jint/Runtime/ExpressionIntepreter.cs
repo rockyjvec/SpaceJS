@@ -1041,47 +1041,24 @@ namespace Jint.Runtime
                 // todo: implement as in http://www.ecma-international.org/ecma-262/5.1/#sec-11.2.4
 
                 var arguments = (JsValue[])local.arguments;
-                if (callExpression.Cached)
+                if (callExpression.Arguments.Count > 0)
                 {
-                    arguments = (JsValue[])callExpression.CachedArguments;
-                }
-                else
-                {
-                    var allLiteral = true;
-                    if (callExpression.Arguments.Count > 0)
+                    if (state.calleeReturned)
                     {
-                        if (state.calleeReturned)
-                        {
-                            state.calleeReturned = false;
-                            var ret = (BuildArgumentsReturnType)state.calleeReturnValue;
-                            allLiteral = ret.local;
-                            local.arguments = arguments = ret.arguments;
-                        }
-                        else
-                        {
-                            arguments = _engine._jsValueArrayPool.RentArray(callExpression.Arguments.Count);
-                            var args = new BuildArgumentsArgsType();
-                            args.expressionArguments = callExpression.Arguments;
-                            args.targetArray = arguments;
-                            Call(BuildArguments, args);
-                            return;
-                        }
-
+                        state.calleeReturned = false;
+                        var ret = (BuildArgumentsReturnType)state.calleeReturnValue;
+                        local.arguments = arguments = ret.arguments;
+                    }
+                    else
+                    {
+                        arguments = _engine._jsValueArrayPool.RentArray(callExpression.Arguments.Count);
+                        var args = new BuildArgumentsArgsType();
+                        args.expressionArguments = callExpression.Arguments;
+                        args.targetArray = arguments;
+                        Call(BuildArguments, args);
+                        return;
                     }
 
-                    if (callExpression.CanBeCached)
-                    {
-                        // The arguments array can be cached if they are all literals
-                        if (allLiteral)
-                        {
-                            callExpression.CachedArguments = arguments;
-                            callExpression.Cached = true;
-                        }
-                        else
-                        {
-                            callExpression.CanBeCached = false;
-                        }
-                    }
                 }
 
                 var func = _engine.GetValue(callee, false);
@@ -1162,7 +1139,7 @@ namespace Jint.Runtime
                     _engine.CallStack.Pop();
                 }
 
-                if (!callExpression.Cached && arguments.Length > 0)
+                if (arguments.Length > 0)
                 {
                     _engine._jsValueArrayPool.ReturnArray(arguments);
                 }
@@ -1186,7 +1163,7 @@ namespace Jint.Runtime
                     }
                     var arguments = (JsValue[])state.local;
 
-                    if (!callExpression.Cached && arguments.Length > 0)
+                    if (arguments.Length > 0)
                     {
                         _engine._jsValueArrayPool.ReturnArray(arguments);
                     }
@@ -1493,7 +1470,6 @@ namespace Jint.Runtime
         }
         public class BuildArgumentsReturnType
         {
-            public bool local;
             public JsValue[] arguments;
         }
         public void BuildArguments(RuntimeState state)
@@ -1501,16 +1477,14 @@ namespace Jint.Runtime
             BuildArgumentsArgsType args = (BuildArgumentsArgsType)state.arg;
 
             List<ArgumentListElement> expressionArguments = args.expressionArguments;
-            JsValue[] targetArray = args.targetArray;
 
             state.local = true;
-            if (state.stage < targetArray.Length)
+            if (state.stage < args.targetArray.Length)
             {
                 if (state.calleeReturned)
                 {
                     var argument = (Expression)expressionArguments[(int)state.stage];
-                    targetArray[(int)state.stage] = _engine.GetValue(state.calleeReturnValue, true);
-                    state.local = (bool)state.local & (argument is Literal);
+                    args.targetArray[(int)state.stage] = _engine.GetValue(state.calleeReturnValue, true);
                     state.calleeReturned = false;
                     state.stage++;
                     return;
@@ -1526,8 +1500,11 @@ namespace Jint.Runtime
             else
             {
                 var ret = new BuildArgumentsReturnType();
-                ret.local = (bool)state.local;
-                ret.arguments = targetArray;
+                ret.arguments = args.targetArray;
+                string ar = "";
+                for (int i = 0; i < args.targetArray.Length; i++)
+                    ar += ", " + args.targetArray[i];
+
                 Return(ret);
                 return;
             }

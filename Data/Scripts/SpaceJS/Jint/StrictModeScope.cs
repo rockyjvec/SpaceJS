@@ -2,7 +2,7 @@
 
 namespace Jint
 {
-    public struct StrictModeScope : IDisposable
+    public class StrictModeScope : IDisposable
     {
         private readonly bool _strict;
         private readonly bool _force;

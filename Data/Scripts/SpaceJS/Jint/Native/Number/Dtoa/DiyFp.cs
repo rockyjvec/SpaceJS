@@ -38,7 +38,7 @@ namespace Jint.Native.Number.Dtoa
 // have the most significant bit of the significand set.
 // Multiplication and Subtraction do not normalize their results.
 // DiyFp are not designed to contain special doubles (NaN and Infinity).
-    internal struct DiyFp
+    internal class DiyFp
     {
         internal const int KSignificandSize = 64;
         private const ulong KUint64MSB = 0x8000000000000000L;
