@@ -44,5 +44,6 @@ More functionality will be added to the javascript API soon.
 
 
 Demo of an early prototype:
+
 [![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/Ja02--7lH9U/0.jpg)](http://www.youtube.com/watch?v=Ja02--7lH9U)
 
