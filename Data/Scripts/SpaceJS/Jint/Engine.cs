@@ -59,7 +59,7 @@ namespace Jint
         internal readonly ArgumentsInstancePool _argumentsInstancePool;
         internal readonly JsValueArrayPool _jsValueArrayPool;
 
-//        public ITypeConverter ClrTypeConverter;
+        //        public ITypeConverter ClrTypeConverter;
 
         // cache of types used when resolving CLR type names
         internal Dictionary<string, Type> TypeCache = new Dictionary<string, Type>();
@@ -107,7 +107,7 @@ namespace Jint
                 {
                     return false;
                 }
-                if(!(obj is ClrPropertyDescriptorFactoriesKey)) return false;
+                if (!(obj is ClrPropertyDescriptorFactoriesKey)) return false;
                 ClrPropertyDescriptorFactoriesKey other = (ClrPropertyDescriptorFactoriesKey)obj;
                 return Equals(other);
             }
@@ -129,12 +129,12 @@ namespace Jint
         static Engine()
         {
             // TODO
-//            var methodInfo = null; //typeof(GC).GetMethod("GetAllocatedBytesForCurrentThread");
+            //            var methodInfo = null; //typeof(GC).GetMethod("GetAllocatedBytesForCurrentThread");
 
-  //          if (methodInfo != null)
-    //        {
-             //   GetAllocatedBytesForCurrentThread =  (Func<long>)Delegate.CreateDelegate(typeof(Func<long>), null, methodInfo);
-      //      }
+            //          if (methodInfo != null)
+            //        {
+            //   GetAllocatedBytesForCurrentThread =  (Func<long>)Delegate.CreateDelegate(typeof(Func<long>), null, methodInfo);
+            //      }
         }
 
         public Engine() : this(null)
@@ -154,12 +154,12 @@ namespace Jint
             Array = ArrayConstructor.CreateArrayConstructor(this);
             Map = MapConstructor.CreateMapConstructor(this);
             Set = SetConstructor.CreateSetConstructor(this);
-            Iterator= IteratorConstructor.CreateIteratorConstructor(this);
+            Iterator = IteratorConstructor.CreateIteratorConstructor(this);
             String = StringConstructor.CreateStringConstructor(this);
             RegExp = RegExpConstructor.CreateRegExpConstructor(this);
             Number = NumberConstructor.CreateNumberConstructor(this);
             Boolean = BooleanConstructor.CreateBooleanConstructor(this);
-//            Date = DateConstructor.CreateDateConstructor(this);
+            //            Date = DateConstructor.CreateDateConstructor(this);
             Math = MathInstance.CreateMathObject(this);
             Json = JsonInstance.CreateJsonObject(this);
 
@@ -211,8 +211,8 @@ namespace Jint
             Boolean.Configure();
             Boolean.PrototypeObject.Configure();
 
-//            Date.Configure();
-//            Date.PrototypeObject.Configure();
+            //            Date.Configure();
+            //            Date.PrototypeObject.Configure();
 
             Math.Configure();
             Json.Configure();
@@ -232,14 +232,14 @@ namespace Jint
 
             // gather some options as fields for faster checks
             _isDebugMode = Options.IsDebugMode;
-            
-            if(_isDebugMode) MyAPIGateway.Utilities.ShowMessage("SpaceJS", "Debug mode enabled.");
+
+            if (_isDebugMode) MyAPIGateway.Utilities.ShowMessage("SpaceJS", "Debug mode enabled.");
 
             _isStrict = Options.IsStrict;
             _maxStatements = Options._MaxStatements;
             _referenceResolver = Options.ReferenceResolver;
             _memoryLimit = Options._MemoryLimit;
-            _runBeforeStatementChecks = (_maxStatements > 0 &&_maxStatements < int.MaxValue)
+            _runBeforeStatementChecks = (_maxStatements > 0 && _maxStatements < int.MaxValue)
                                         || Options._TimeoutInterval.Ticks > 0
                                         || _memoryLimit > 0
                                         || _isDebugMode;
@@ -254,16 +254,16 @@ namespace Jint
             _statements = new StatementInterpreter(this);
             _expressions = new ExpressionInterpreter(this);
 
-/*            if (Options._IsClrAllowed)
-            {
-                Global.FastAddProperty("System", new NamespaceReference(this, "System"), false, false, false);
-                Global.FastAddProperty("importNamespace", new ClrFunctionInstance(
-                    this,
-                    "importNamespace",
-                    (thisObj, arguments) => new NamespaceReference(this, TypeConverter.ToString(arguments.At(0)))), false, false, false);
-            }
-*/
-//            ClrTypeConverter = new DefaultTypeConverter(this);
+            /*            if (Options._IsClrAllowed)
+                        {
+                            Global.FastAddProperty("System", new NamespaceReference(this, "System"), false, false, false);
+                            Global.FastAddProperty("importNamespace", new ClrFunctionInstance(
+                                this,
+                                "importNamespace",
+                                (thisObj, arguments) => new NamespaceReference(this, TypeConverter.ToString(arguments.At(0)))), false, false, false);
+                        }
+            */
+            //            ClrTypeConverter = new DefaultTypeConverter(this);
         }
 
         public LexicalEnvironment GlobalEnvironment { get; }
@@ -315,16 +315,16 @@ namespace Jint
 
             _executionContexts.Push(context);
         }
-/*
-        public Engine SetValue(string name, Delegate value)
-        {
-            Global.FastAddProperty(name, new DelegateWrapper(this, value), true, false, true);
-            return this;
-        }
-*/
+        /*
+                public Engine SetValue(string name, Delegate value)
+                {
+                    Global.FastAddProperty(name, new DelegateWrapper(this, value), true, false, true);
+                    return this;
+                }
+        */
         public Engine SetValue(string name, string value)
         {
-            return SetValue(name, (JsValue) value);
+            return SetValue(name, (JsValue)value);
         }
 
         public Engine SetValue(string name, double value)
@@ -700,9 +700,9 @@ namespace Jint
         }
 
 
-        public void Call(Action<RuntimeState> method, object arg)
+        public void Call(Action<RuntimeState> method, object arg, bool interrupt = false)
         {
-            _statements.Call(method, arg);
+            _statements.Call(method, arg, interrupt);
         }
 
         public void Return(object o)
@@ -727,11 +727,11 @@ namespace Jint
 
             if (!(value is Reference))
             {
-                return ((Completion) value).Value;
+                return ((Completion)value).Value;
             }
 
             var reference = value as Reference;
-            
+
             if (reference._baseValue._type == Types.Undefined)
             {
                 JsValue val = default(JsValue);
@@ -789,7 +789,7 @@ namespace Jint
                 }
             }
 
-            var record = (EnvironmentRecord) baseValue;
+            var record = (EnvironmentRecord)baseValue;
             if (ReferenceEquals(record, null))
             {
                 ExceptionHelper.ThrowArgumentException();
@@ -826,7 +826,7 @@ namespace Jint
                 var baseValue = reference._baseValue;
                 if (reference._baseValue._type == Types.Object || reference._baseValue._type == Types.None)
                 {
-                    ((ObjectInstance) baseValue).Put(reference._name, value, reference._strict);
+                    ((ObjectInstance)baseValue).Put(reference._name, value, reference._strict);
                 }
                 else
                 {
@@ -836,7 +836,7 @@ namespace Jint
             else
             {
                 var baseValue = reference._baseValue;
-                ((EnvironmentRecord) baseValue).SetMutableBinding(reference._name, value, reference._strict);
+                ((EnvironmentRecord)baseValue).SetMutableBinding(reference._name, value, reference._strict);
             }
         }
 
@@ -927,7 +927,7 @@ namespace Jint
         /// <returns>The value returned by the function call.</returns>
         public void Invoke(JsValue value, object thisObj, object[] arguments)
         {
-            Call(StateInvoke, new InvokeArgs(value, thisObj, arguments));
+            Call(StateInvoke, new InvokeArgs(value, thisObj, arguments), true);
         }
 
         public void StateInvoke(RuntimeState state)
@@ -954,7 +954,7 @@ namespace Jint
                 ((JsValue[])state.local)[i] = JsValue.FromObject(this, arguments[i]);
             }
 
-            if(callable is ScriptFunctionInstance)
+            if (callable is ScriptFunctionInstance)
             {
                 Call((callable as ScriptFunctionInstance).CallState, new CallArgs(JsValue.FromObject(this, thisObj), (JsValue[])state.local));
                 return;
@@ -1068,7 +1068,7 @@ namespace Jint
                     for (var j = 0; j < declarationsCount; j++)
                     {
                         var d = variableDeclaration.Declarations[j];
-                        var dn = ((Identifier) d.Id).Name;
+                        var dn = ((Identifier)d.Id).Name;
                         var varAlreadyDeclared = env.HasBinding(dn);
                         if (!varAlreadyDeclared)
                         {

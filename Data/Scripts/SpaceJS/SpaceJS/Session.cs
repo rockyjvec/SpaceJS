@@ -44,9 +44,9 @@ namespace SpaceJS
                 controls.Add(edit);
 
                 var run = MyAPIGateway.TerminalControls.CreateControl<IMyTerminalControlButton, IMyProgrammableBlock>("JSTerminalRun");
-                run.Title = MyStringId.GetOrCompute("Run");
-                run.Tooltip = MyStringId.GetOrCompute("Runs the javascript.");
-                run.Action = Run;
+                run.Title = MyStringId.GetOrCompute("Reset");
+                run.Tooltip = MyStringId.GetOrCompute("Reset script/load new script.");
+                run.Action = Reset;
                 run.Visible = (b) => true;
                 run.Enabled = (b) => true;
                 controls.Add(run);
@@ -69,10 +69,10 @@ namespace SpaceJS
             }
         }
 
-        public void Run(IMyTerminalBlock block)
+        public void Reset(IMyTerminalBlock block)
         {
             Block pb = block.GameLogic.GetAs<Block>();
-            pb.Run();
+            pb.Reset();
         }
 
     }

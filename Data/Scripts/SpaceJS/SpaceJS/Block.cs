@@ -53,7 +53,7 @@ namespace SpaceJS
 
             blocks.Add(this);
 
-            engine = new CustomEngine(null, this);
+            this.Reset();
         }
 
         public override void Close()
@@ -95,7 +95,7 @@ namespace SpaceJS
             }
         }
         
-        public void Run() // Reset and start running (called by clicking the Run button)
+        public void Reset() // Reset and start running (called by clicking the Run button)
         {
             UpdateCustomInfo("");
             try

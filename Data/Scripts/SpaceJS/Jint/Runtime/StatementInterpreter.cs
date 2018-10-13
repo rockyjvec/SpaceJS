@@ -1124,18 +1124,18 @@ namespace Jint.Runtime
 
         public void Return(object o)
         {
-            this.stack.Pop();
+            var current = this.stack.Pop();
 
-            if (this.stack.Count > 0)
+            if (this.stack.Count > 0 && !current.interrupt)
             {
                 this.stack.Peek().calleeReturnValue = o;
                 this.stack.Peek().calleeReturned = true;
             }
         }
 
-        public void Call(Action<RuntimeState> method, object arg)
+        public void Call(Action<RuntimeState> method, object arg, bool interrupt = false)
         {
-            this.stack.Push(new RuntimeState(method, arg));
+            this.stack.Push(new RuntimeState(method, arg, interrupt));
         }
 
         public bool Step()
@@ -1196,7 +1196,7 @@ namespace Jint.Runtime
                         lhs.AssertValid(_engine);
 
                         var value = _engine.GetValue(state.calleeReturnValue, true);
-                        
+
                         _engine.PutValue(lhs, value);
                         _engine._referencePool.Return(lhs);
                         state.local = null;

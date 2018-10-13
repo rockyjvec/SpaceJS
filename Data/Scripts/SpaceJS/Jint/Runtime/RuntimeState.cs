@@ -16,11 +16,13 @@ namespace Jint.Runtime
         public object calleeReturnValue;
         public bool calleeReturned = false;
         public uint stage = 0;
+        public bool interrupt = false;
 
-        public RuntimeState(Action<RuntimeState> method, object arg)
+        public RuntimeState(Action<RuntimeState> method, object arg, bool interrupt = false)
         {
             this.method = method;
             this.arg = arg;
+            this.interrupt = interrupt;
         }
 
         public void Call()
