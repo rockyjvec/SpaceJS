@@ -68,11 +68,14 @@ namespace SpaceJS
         
         public static void Step() // Step the interpreter in each block
         {
-            uint numberOfSteps = Settings.maxStepsPerTick / (uint)blocks.Count;
-            blocks.ForEach(block =>
-            {
-                block.ExecuteSteps(numberOfSteps);
-            });
+            if(blocks.Count > 0)
+            {                
+                uint numberOfSteps = Settings.maxStepsPerTick / (uint)blocks.Count;
+                blocks.ForEach(block =>
+                {
+                    block.ExecuteSteps(numberOfSteps);
+                });
+            }
         }
         
         public void ExecuteSteps(uint numberOfSteps) // Step through the interpreter and handle any events
