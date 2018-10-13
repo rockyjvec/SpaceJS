@@ -1,7 +1,7 @@
 # SpaceJS
 A Javascript Programmable Block mod for Space Engineers.
 
-This MOD is considered experimental alpha and should NOT be used on live servers or games.
+This mod is experimental and should NOT be used on live servers or games.  There are likely memory leaks and other game crashing bugs.  You have been warned.
 
 # Features
 
@@ -43,6 +43,6 @@ event.onAction("AnAction", doSomething); // subscribe to the action
 More functionality will be added to the javascript API soon.
 
 
-
+Demo of an early prototype:
 [![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/Ja02--7lH9U/0.jpg)](http://www.youtube.com/watch?v=Ja02--7lH9U)
 
