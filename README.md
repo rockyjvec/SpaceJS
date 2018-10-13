@@ -1,4 +1,4 @@
-# SpaceJS
+# Space Engineers Programmable Block
 
 Steam Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=1537730714
 
