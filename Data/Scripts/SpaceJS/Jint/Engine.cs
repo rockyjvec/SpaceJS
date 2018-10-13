@@ -888,9 +888,9 @@ namespace Jint
         /// <param name="propertyName">The name of the function to call.</param>
         /// <param name="arguments">The arguments of the function call.</param>
         /// <returns>The value returned by the function call.</returns>
-        public JsValue Invoke(string propertyName, params object[] arguments)
+        public void Invoke(string propertyName, params object[] arguments)
         {
-            return Invoke(propertyName, null, arguments);
+            Invoke(propertyName, null, arguments);
         }
 
         /// <summary>
@@ -900,11 +900,11 @@ namespace Jint
         /// <param name="thisObj">The this value inside the function call.</param>
         /// <param name="arguments">The arguments of the function call.</param>
         /// <returns>The value returned by the function call.</returns>
-        public JsValue Invoke(string propertyName, object thisObj, object[] arguments)
+        public void Invoke(string propertyName, object thisObj, object[] arguments)
         {
             var value = GetValue(propertyName);
 
-            return Invoke(value, thisObj, arguments);
+            Invoke(value, thisObj, arguments);
         }
 
         /// <summary>
@@ -913,9 +913,9 @@ namespace Jint
         /// <param name="value">The function to call.</param>
         /// <param name="arguments">The arguments of the function call.</param>
         /// <returns>The value returned by the function call.</returns>
-        public JsValue Invoke(JsValue value, params object[] arguments)
+        public void Invoke(JsValue value, params object[] arguments)
         {
-            return Invoke(value, null, arguments);
+            Invoke(value, null, arguments);
         }
 
         /// <summary>
@@ -925,20 +925,46 @@ namespace Jint
         /// <param name="thisObj">The this value inside the function call.</param>
         /// <param name="arguments">The arguments of the function call.</param>
         /// <returns>The value returned by the function call.</returns>
-        public JsValue Invoke(JsValue value, object thisObj, object[] arguments)
+        public void Invoke(JsValue value, object thisObj, object[] arguments)
         {
-            var callable = value as ICallable ?? ExceptionHelper.ThrowArgumentException<ICallable>("Can only invoke functions");
+            Call(StateInvoke, new InvokeArgs(value, thisObj, arguments));
+        }
 
-            var items = _jsValueArrayPool.RentArray(arguments.Length);
-            for (int i = 0; i < arguments.Length; ++i)
+        public void StateInvoke(RuntimeState state)
+        {
+            InvokeArgs args = (InvokeArgs)state.arg;
+            var value = args.value;
+            var arguments = args.arguments;
+            var thisObj = args.thisObject;
+
+
+            if (state.calleeReturned)
             {
-                items[i] = JsValue.FromObject(this, arguments[i]);
+                _jsValueArrayPool.ReturnArray((JsValue[])state.local);
+                Return(state.calleeReturnValue);
+                return;
             }
 
-            var result = callable.Call(JsValue.FromObject(this, thisObj), items);
-            _jsValueArrayPool.ReturnArray(items);
 
-            return result;
+            var callable = value as ICallable ?? ExceptionHelper.ThrowArgumentException<ICallable>("Can only invoke functions");
+
+            state.local = _jsValueArrayPool.RentArray(arguments.Length);
+            for (int i = 0; i < arguments.Length; ++i)
+            {
+                ((JsValue[])state.local)[i] = JsValue.FromObject(this, arguments[i]);
+            }
+
+            if(callable is ScriptFunctionInstance)
+            {
+                Call((callable as ScriptFunctionInstance).CallState, new CallArgs(JsValue.FromObject(this, thisObj), (JsValue[])state.local));
+                return;
+            }
+            else
+            {
+                Return(null);
+                return;
+            }
+
         }
 
         /// <summary>

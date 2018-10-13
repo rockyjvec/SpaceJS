@@ -6,7 +6,6 @@ using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Environments;
-using Runtime;
 
 namespace Jint.Native.Function
 {

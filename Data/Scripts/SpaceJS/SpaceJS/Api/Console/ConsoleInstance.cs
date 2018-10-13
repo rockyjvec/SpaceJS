@@ -12,7 +12,7 @@ namespace SpaceJS.Api.Console
 {
     public sealed class ConsoleInstance : ObjectInstance
     {
-        private SpaceJS mod;
+        private Block block;
 
         private ConsoleInstance(Jint.Engine engine) : base(engine, "console")
         {
@@ -27,18 +27,19 @@ namespace SpaceJS.Api.Console
             return console;
         }
 
-        public void Configure(SpaceJS mod)
+        public void Configure(Block block)
         {
-            this.mod = mod;
+            this.block = block;
 
             FastAddProperty("log", new ClrFunctionInstance(Engine, "log", Log), true, false, true);
         }
 
+        // Write a log entry to the PB custom info
         private JsValue Log(JsValue thisObject, JsValue[] arguments)
         {
             var message = TypeConverter.ToString(arguments.At(0));
 
-            mod.AppendCustomInfo(message + "\n");
+            block.AppendCustomInfo(message + "\n");
             
             return message;
         }

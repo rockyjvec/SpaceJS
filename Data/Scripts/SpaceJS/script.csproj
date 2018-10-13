@@ -188,7 +188,9 @@
     <Compile Include="Jint\Native\Boolean\BooleanConstructor.cs" />
     <Compile Include="Jint\Native\Boolean\BooleanInstance.cs" />
     <Compile Include="Jint\Native\Boolean\BooleanPrototype.cs" />
+    <Compile Include="Jint\Runtime\InvokeArgs.cs" />
     <Compile Include="Jint\Runtime\CallArgs.cs" />
+    <Compile Include="SpaceJS\Api\Event\EventInstance.cs" />
     <Compile Include="SpaceJS\Api\Console\ConsoleInstance.cs" />
     <Compile Include="Jint\Native\Error\ErrorConstructor.cs" />
     <Compile Include="Jint\Native\Error\ErrorInstance.cs" />
@@ -303,9 +305,10 @@
     <Compile Include="Jint\Runtime\TypeConverter.cs" />
     <Compile Include="Jint\StrictModeScope.cs" />
     <Compile Include="Jint\Runtime\RuntimeState.cs" />
-    <Compile Include="SpaceJS\Engine.cs" />
+    <Compile Include="SpaceJS\CustomEngine.cs" />
     <Compile Include="SpaceJS\Session.cs" />
-    <Compile Include="SpaceJS\SpaceJS.cs" />
+    <Compile Include="SpaceJS\Block.cs" />
+    <Compile Include="SpaceJS\Settings.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.  

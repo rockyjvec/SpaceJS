@@ -12,7 +12,6 @@ using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Environments;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
-using Runtime;
 
 namespace Jint.Runtime
 {

@@ -7,13 +7,15 @@ using System.Threading.Tasks;
 
 namespace Jint.Runtime
 {
-    public class CallArgs
+    public class InvokeArgs
     {
-        public JsValue thisObject;
-        public JsValue[] arguments;
+        public JsValue value;
+        public object thisObject;
+        public object[] arguments;
 
-        public CallArgs(JsValue thisObject, JsValue[] arguments)
+        public InvokeArgs(JsValue value, object thisObject, object[] arguments)
         {
+            this.value = value;
             this.thisObject = thisObject;
             this.arguments = arguments;
         }
