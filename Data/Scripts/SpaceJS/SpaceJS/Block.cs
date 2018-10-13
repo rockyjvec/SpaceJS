@@ -69,23 +69,30 @@ namespace SpaceJS
         public static void Step() // Step the interpreter in each block
         {
             if(blocks.Count > 0)
-            {                
-                uint numberOfSteps = Settings.maxStepsPerTick / (uint)blocks.Count;
-                blocks.ForEach(block =>
+            {
+                uint processedBlocks = 0;
+                uint usedSteps = 0;
+                var copy = new List<Block>(blocks); // prevent "Collection was modified; enumeration operation may not execute." errors
+                copy.ForEach(block =>
                 {
-                    block.ExecuteSteps(numberOfSteps);
+                    // Tries to distribute load evenly between all blocks
+                    usedSteps += block.ExecuteSteps((Settings.maxStepsPerTick - usedSteps) / ((uint)blocks.Count - processedBlocks));
+                    processedBlocks++;
                 });
             }
         }
         
-        public void ExecuteSteps(uint numberOfSteps) // Step through the interpreter and handle any events
+        public uint ExecuteSteps(uint numberOfSteps) // Step through the interpreter and handle any events
         {
+            if (!tb.IsWorking) return 0; // Check that the block is working/powered
+
+            uint usedSteps = 0;
             try
             {
                 if (engine != null)
                 {
                     // Throttle
-                    for (uint i = 0; i < numberOfSteps && engine.Step(); i++) ;
+                    for (usedSteps = 0; usedSteps < numberOfSteps && engine.Step(); usedSteps++) ;
                 }
             }
             catch (Exception e)
@@ -93,6 +100,8 @@ namespace SpaceJS
                 engine.Clear();
                 AppendCustomInfo("Error: " + e.Message + "\n");
             }
+
+            return usedSteps;
         }
         
         public void Reset() // Reset and start running (called by clicking the Run button)
