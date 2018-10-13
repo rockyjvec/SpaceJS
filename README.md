@@ -1,4 +1,7 @@
 # SpaceJS
+
+Steam Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=1537730714
+
 A Javascript Programmable Block mod for Space Engineers.
 
 This mod is experimental and should NOT be used on live servers or games.  There are likely memory leaks and other game crashing bugs.  You have been warned.
