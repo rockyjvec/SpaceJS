@@ -22,7 +22,8 @@ console.log("Hello World");
 
 ### Events
 
-* Subscribe and unsubscibe from actions.  Actions you are subscribed to automatically get added as actions in button panels and cockpits so you can trigger javascript code to run when to press a button, etc.  In the following example, after running the code initially, "AnAction" will show up in a button panel for the programmable block as an action.  If you assign that action and trigger it, the message will be output, then the action will get removed.  So if you press the button panel button a second time, nothing will happen.
+* Subscribe and unsubscibe from actions using ```event.onAction``` and ```event.offAction```.  
+* Actions that you are subscribed to are automatically added to the programmable block as actions in button panels and cockpits so you can trigger javascript code to run when to press a button, etc.  After running the following code, "AnAction" will show up in a button panel for the programmable block as an action.  If you assign that action and trigger it, the message will be output, then the action will get removed.  So if you press the button panel button a second time, nothing will happen.
 ```javascript
 function doSomething(action)
 {
