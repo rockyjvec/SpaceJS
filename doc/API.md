@@ -1,6 +1,6 @@
-# API Globals
+# API
 
-## Global API Objects
+## Globals
 
 [Console](Console.md)
 
