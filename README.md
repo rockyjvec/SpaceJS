@@ -20,6 +20,10 @@ This mod is experimental and should NOT be used on live servers or games.  There
 * Since the interpreted code executes in a sandbox, it should be much safer.
 * Events can "interrupt" the execution of a script.  No more needing to write state machines to avoid complexity errors.
 
+# Wish List
+
+* I'm hoping to make it so other mods can add functionality to the API.
+
 # Credits
 
 This mod uses a heavily modified version of esprima-dotnet and jint by Sebastien Ros:
