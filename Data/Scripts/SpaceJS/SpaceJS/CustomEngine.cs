@@ -7,6 +7,7 @@ using Jint;
 using Sandbox.ModAPI.Interfaces.Terminal;
 using SpaceJS.Api.Console;
 using SpaceJS.Api.Event;
+using SpaceJS.Api.Blocks;
 
 namespace SpaceJS
 {
@@ -14,21 +15,26 @@ namespace SpaceJS
     {
         public ConsoleInstance Console;
         public EventInstance Event;
+        public BlocksInstance Blocks;
 
         public CustomEngine(Action<Options> options, Block block) : base(options)
         {
             // Initialize all SpaceJS objects into engine
 
-            Console = ConsoleInstance.CreateConsoleObject(this);
+            Console = ConsoleInstance.CreateObject(this);
             Console.Configure(block);
 
-            Event = EventInstance.CreateEventObject(this);
+            Event = EventInstance.CreateObject(this);
             Event.Configure(block);
+
+            Blocks = BlocksInstance.CreateObject(this);
+            Blocks.Configure(block);
 
             // Setup Globals
 
             Global.FastAddProperty("console", Console, true, false, true);
-            Global.FastAddProperty("event", Event, true, false, true);
+            Global.FastAddProperty("Event", Event, true, false, true);
+            Global.FastAddProperty("Blocks", Blocks, true, false, true);
 
         }
 

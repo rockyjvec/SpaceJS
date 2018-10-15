@@ -28,14 +28,15 @@ namespace SpaceJS
                                     "JSLargeProgrammableBlock")]
     public class Block : MyGameLogicComponent
     {
-        private IMyTerminalBlock tb;
-        private IMyCubeBlock cb;
+        public IMyTerminalBlock tb;
+        public IMyCubeBlock cb;
         private IMyCubeBlock m_parent;
 
         private CustomEngine engine = null;
         
         private string CustomInfo = "";
 
+        // List of all existing javascript blocks in the game
         private static List<Block> blocks = new List<Block>();
 
         private uint counter = 0;     
@@ -46,7 +47,7 @@ namespace SpaceJS
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
-            tb = Entity as Sandbox.ModAPI.IMyTerminalBlock;
+            tb = Entity as IMyTerminalBlock;
             cb = Entity as IMyCubeBlock;
 
             tb.AppendingCustomInfo += AppendingCustomInfo;

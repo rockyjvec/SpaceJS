@@ -18,7 +18,7 @@ namespace SpaceJS.Api.Console
         {
         }
 
-        public static ConsoleInstance CreateConsoleObject(Jint.Engine engine)
+        public static ConsoleInstance CreateObject(Jint.Engine engine)
         {
             var console = new ConsoleInstance(engine);
             console.Extensible = true;

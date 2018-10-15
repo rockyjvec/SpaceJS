@@ -44,7 +44,7 @@ namespace SpaceJS.Api.Event
             }
         }
 
-        public static EventInstance CreateEventObject(Jint.Engine engine)
+        public static EventInstance CreateObject(Jint.Engine engine)
         {
             var e = new EventInstance(engine);
             e.Extensible = true;

@@ -190,6 +190,8 @@
     <Compile Include="Jint\Native\Boolean\BooleanPrototype.cs" />
     <Compile Include="Jint\Runtime\InvokeArgs.cs" />
     <Compile Include="Jint\Runtime\CallArgs.cs" />
+    <Compile Include="SpaceJS\Api\Blocks\BlockInstance.cs" />
+    <Compile Include="SpaceJS\Api\Blocks\BlocksInstance.cs" />
     <Compile Include="SpaceJS\Api\Event\EventInstance.cs" />
     <Compile Include="SpaceJS\Api\Console\ConsoleInstance.cs" />
     <Compile Include="Jint\Native\Error\ErrorConstructor.cs" />
