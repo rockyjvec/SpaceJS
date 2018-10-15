@@ -16,7 +16,7 @@ This mod is experimental and should NOT be used on live servers or games.  There
 
 * Still works with in-game scripts disabled.
 * Since the javascript interpreter is a state machine, the programmable blocks can be throttled at the statement level.  This means that a javascript application can go into an infinite loop and/or run forever and never cause complexity errors or slow down the server.
-* The "throttle" prevents more than a set amount of statements from getting executed across ALL programmable blocks.  So having 20 programmable blocks should not slow down the server.  Instead, each programmable block will run slower.  I tested this with 64 programamble blocks all running an infinite while loop with no noticable extra cpu usage.
+* The "throttle" prevents more than a set amount of statements from getting executed across ALL programmable blocks.  So having 20 programmable blocks should not slow down the server.  Instead, each programmable block will run slower.  I tested this with 64 programamble blocks all running an infinite while loop with no noticable extra cpu usage.  https://youtu.be/qgLJvDc4Zq0
 * Since the interpreted code executes in a sandbox, it should be much safer.
 * Events can "interrupt" the execution of a script.  No more needing to write state machines to avoid complexity errors.
 
