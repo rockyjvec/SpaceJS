@@ -8,6 +8,6 @@ Applies/executes the given action.
 
 Example:
 ```javascript
-var soundBlock = Blocks.Get("Sound Block 1");
+var soundBlock = Blocks.get("Sound Block 1");
 soundBlock.applyAction("PlaySound");
 ```
