@@ -2,6 +2,8 @@
 
 ## Play a sound block when an action is triggered by a button panel.
 
+[![Youtube Video](http://img.youtube.com/vi/xiaYpaR1kLU/0.jpg)](http://www.youtube.com/watch?v=xiaYpaR1kLU)
+
 * Setup a sound block named "Sound Block" with settings to play an alarm.
 * Put the following script in a Javascript Programmable Block and reset it.
 ```javascript
