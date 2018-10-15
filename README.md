@@ -15,7 +15,6 @@ This mod is experimental and should NOT be used on live servers or games.  There
 # Features
 
 * Still works with in-game scripts disabled.
-* Interpreted in a state machine
 * Scripts can go into an infinite loop and/or run forever and never cause any complexity errors or slow down the server.
 * Smart throttle that prevents more then a set amount of statements from getting executed across ALL programmable blocks.  Tested by running an infinite while loop on 64 programmable blocks at the same time with no performance loss.  Each block just ran slower: https://youtu.be/qgLJvDc4Zq0
 * Events can "interrupt" the execution of a script.  No more needing to write state machines to avoid complexity errors.
