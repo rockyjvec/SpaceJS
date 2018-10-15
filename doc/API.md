@@ -1,8 +1,10 @@
 # API
 
-Under Construction
+API is under construction...
+
 
 [Examples](examples.md)
+
 
 ## Globals
 
