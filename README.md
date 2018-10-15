@@ -1,4 +1,4 @@
-# Javascript Programmable Block
+# The Javascript Programmable Block Mod
 
 Steam Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=1537730714
 
@@ -18,3 +18,12 @@ This mod is experimental and should NOT be used on live servers or games.  There
 * The "throttle" prevents more than a set amount of statements from getting executed across ALL programmable blocks.  So having 20 programmable blocks should not slow down the server.  Instead, each programmable block will run slower.  I tested this with 64 programamble blocks all running an infinite while loop with no noticable extra cpu usage.
 * Since the interpreted code executes in a sandbox, it should be much safer.
 * Events can "interrupt" the execution of a script.  No more needing to write state machines to avoid complexity errors.
+
+# Credits
+
+This mod uses a heavily modified version of esprima-dotnet and jint by Sebastien Ros:
+https://github.com/sebastienros/esprima-dotnet
+https://github.com/sebastienros/jint
+
+The thumbnail is from logo.js by voodootikigod:
+https://github.com/voodootikigod/logo.js
