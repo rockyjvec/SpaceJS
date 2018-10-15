@@ -19,6 +19,21 @@ This mod is experimental and should NOT be used on live servers or games.  There
 * Smart throttle that prevents more then a set amount of statements from getting executed across ALL programmable blocks.  Tested by running an infinite while loop on 64 programmable blocks at the same time with no performance loss.  Each block just ran slower: https://youtu.be/qgLJvDc4Zq0
 * Events can "interrupt" the execution of a script.  No more needing to write state machines to avoid complexity errors.
 
+# Example Code
+
+```javascript
+function playSound()
+{
+  var soundBlock = Blocks.get("Sound Block");
+  if(soundBlock === null)
+    console.log("Sound block not found");
+  else
+    soundBlock.applyAction("PlaySound");
+}
+
+Event.onAction("TriggerAlarm", playSound);
+```
+
 # Wish List
 
 * I'm hoping to make it so other mods can add functionality to the API.
