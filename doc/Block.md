@@ -2,7 +2,7 @@
 
 An object represending an ingame terminal block
 
-#### ApplyAction(string)
+#### applyAction(string)
 
 Applies/executes the given action.
 
