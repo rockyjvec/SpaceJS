@@ -22,8 +22,12 @@ This mod is experimental and should NOT be used on live servers or games.  There
 # Credits
 
 This mod uses a heavily modified version of esprima-dotnet and jint by Sebastien Ros:
+
 https://github.com/sebastienros/esprima-dotnet
+
 https://github.com/sebastienros/jint
 
+
 The thumbnail is from logo.js by voodootikigod:
+
 https://github.com/voodootikigod/logo.js
