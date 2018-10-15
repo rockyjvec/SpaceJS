@@ -1,5 +1,7 @@
 # API
 
+[Examples](examples.md)
+
 ## Globals
 
 [Console](Console.md)
