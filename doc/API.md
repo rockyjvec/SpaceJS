@@ -4,13 +4,12 @@
 
 ## Globals
 
-[Console](Console.md)
+[Console](Console.md) - Write messages to terminal.
 
-[Event](Event.md)
+[Event](Event.md) - Create and handle events.
 
-[Blocks](Blocks.md)
+[Blocks](Blocks.md) - Manage in-game blocks.
 
 ## Objects
 
-[Block](Block.md)
-
+[Block](Block.md) - Represents an in-game block.
